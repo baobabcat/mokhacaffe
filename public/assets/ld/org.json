@@ -1,0 +1,9 @@
+{
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "name": "Mokha Caffè",
+  "url": "https://mokhacaffe.com/",
+  "logo": "https://mokhacaffe.com/assets/favicon.svg",
+  "description": "Founding-stage specialty coffee brand named for Al-Mokha, the historic Yemeni coffee port.",
+  "foundingDate": "2026"
+}

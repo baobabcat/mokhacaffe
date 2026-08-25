@@ -1,0 +1,9 @@
+{
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": "What “mocha” really means: port, bean, drink",
+  "datePublished": "2026-08-25",
+  "author": { "@type": "Organization", "name": "Mokha Caffè", "url": "https://mokhacaffe.com/" },
+  "publisher": { "@type": "Organization", "name": "Mokha Caffè", "url": "https://mokhacaffe.com/" },
+  "mainEntityOfPage": "https://mokhacaffe.com/journal/what-mocha-really-means/"
+}
