@@ -8,9 +8,18 @@ Cloudflare Workers Static Assets, served by a tiny Worker that 301s www → apex
 - `src/index.js` — Worker: www→apex 301, then serves `public/` via ASSETS
 - `wrangler.jsonc` — name, routes (custom domains apex + www), assets binding
 - `tools/gen_og.py` — regenerates `public/assets/og.png` (pure stdlib)
+- `tools/seo_audit.py` — 124-check on-page/sitemap/link audit of the live site
+- `tools/rum_baseline.py` — weekly Web Analytics baseline via GraphQL
+- `tools/indexnow_ping.py` — submits sitemap URLs to IndexNow (Bing/Yandex)
 
 ## Deploy
     CLOUDFLARE_API_TOKEN=... wrangler deploy
+
+After any deploy that adds/changes URLs (new journal post, new page):
+1. bump `lastmod` in `public/sitemap.xml`,
+2. `wrangler deploy`,
+3. `python3 tools/indexnow_ping.py` (key file lives at
+   `public/79ab30351487365090c7d6b534c3dbb4.txt`; HTTP 200/202 = accepted).
 
 Rules: git + wrangler only, no console hand-edits. Factual integrity: no
 invented business, inventory, testimonials, prices, or revenue. See
