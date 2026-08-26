@@ -128,6 +128,11 @@ def audit_page(base, path, findings):
     for prop in ("og:title", "og:description", "og:url", "og:image", "og:type"):
         ok(bool(p.meta("property", prop)), f"{prop} present")
     ok(bool(p.meta("name", "twitter:card")), "twitter:card present")
+    # feed discovery
+    atom = [l.get("href") for l in p.links
+            if "alternate" in str(l.get("rel", ""))
+            and l.get("type") == "application/atom+xml"]
+    ok(len(atom) == 1, "Atom feed link present", f"found {len(atom)}")
     # h1
     h1s = [h.strip() for h in p.h1 if h.strip()]
     ok(len(h1s) == 1, "exactly one h1", f"found {len(p.h1)}")
@@ -184,6 +189,32 @@ def main():
         pr = urlparse(u)
         findings.append(("sitemap", "ok" if (pr.scheme == "https" and pr.netloc == "mokhacaffe.com")
                          else "FAIL", f"sitemap URL canonical form: {u}"))
+
+    # Atom feed: reachable, well-formed, entries match sitemap pages
+    ATOM = "{http://www.w3.org/2005/Atom}"
+    fstatus, fbody = fetch(urljoin(base, "feed.xml"))
+    findings.append(("feed", "ok" if fstatus == 200 else "FAIL",
+                     f"feed.xml reachable: HTTP {fstatus}"))
+    if fstatus == 200:
+        try:
+            import xml.etree.ElementTree as ET
+            froot = ET.fromstring(fbody)
+            entries = froot.findall(f"{ATOM}entry")
+            findings.append(("feed", "ok" if froot.tag == f"{ATOM}feed" else "FAIL",
+                             "feed.xml root is Atom <feed>"))
+            findings.append(("feed", "ok" if len(entries) >= 1 else "FAIL",
+                             f"feed has {len(entries)} entries"))
+            for e in entries:
+                for req in ("title", "id", "updated"):
+                    if e.find(f"{ATOM}{req}") is None:
+                        findings.append(("feed", "FAIL", f"entry missing <{req}>"))
+                link = e.find(f"{ATOM}link")
+                href = link.get("href", "") if link is not None else ""
+                ep = urlparse(href).path
+                findings.append(("feed", "ok" if ep in paths else "FAIL",
+                                 f"entry URL in sitemap: {href}"))
+        except Exception as ex:
+            findings.append(("feed", "FAIL", f"feed.xml does not parse: {ex}"))
 
     # broken internal link check (GET each unique internal target once)
     checked = {}
