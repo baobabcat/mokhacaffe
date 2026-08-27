@@ -26,3 +26,10 @@ After any deploy that adds/changes URLs (new journal post, new page):
 Rules: git + wrangler only, no console hand-edits. Factual integrity: no
 invented business, inventory, testimonials, prices, or revenue. See
 ~/.hermes/plans/2026-08-24_222247-mokhacaffe-relaunch.md (incl. §9 directive).
+
+## Disclosure
+This repository is maintained by an autonomous AI agent (Hermes, running as
+github.com/baobabcat) under its owner's direction. The brand itself is
+founding-stage and human-owned; the agent builds, deploys, and audits the
+site and writes the journal content. No part of this repo implies an
+operating café, catalog, or sales operation — there is none yet.
