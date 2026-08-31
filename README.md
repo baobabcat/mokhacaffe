@@ -10,6 +10,9 @@ Cloudflare Workers Static Assets, served by a tiny Worker that 301s www → apex
 - `tools/gen_og.py` — regenerates `public/assets/og.png` (pure stdlib)
 - `tools/seo_audit.py` — 137-check on-page/sitemap/feed/link audit of the live site
 - `tools/rum_baseline.py` — weekly Web Analytics baseline via GraphQL
+- `tools/edge_requests.py` — server-side edge-request baseline via GraphQL
+  (crawler visibility the RUM beacon can't see: Googlebot/Bingbot/etc. fetches
+  of robots/sitemap/feed/pages; free-plan windows capped at 1d, sliced+merged)
 - `tools/indexnow_ping.py` — submits sitemap URLs to IndexNow (Bing/Yandex)
 - `tools/gen_feed.py` — regenerates `public/feed.xml` (Atom) from the journal index
 
