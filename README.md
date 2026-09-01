@@ -14,6 +14,9 @@ Cloudflare Workers Static Assets, served by a tiny Worker that 301s www → apex
   (crawler visibility the RUM beacon can't see: Googlebot/Bingbot/etc. fetches
   of robots/sitemap/feed/pages; free-plan windows capped at 1d, sliced+merged)
 - `tools/indexnow_ping.py` — submits sitemap URLs to IndexNow (Bing/Yandex)
+- `tools/bing_webmaster.py` — Bing Webmaster API client (URL submission via
+  SubmitUrlBatch + verifiable index/crawl/query stats). Needs the
+  `BING_WEBMASTER_API_KEY` env var (owner action; never committed).
 - `tools/gen_feed.py` — regenerates `public/feed.xml` (Atom) from the journal index
 
 ## Deploy
