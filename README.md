@@ -8,15 +8,15 @@ Cloudflare Workers Static Assets, served by a tiny Worker that 301s www → apex
 - `src/index.js` — Worker: www→apex 301, then serves `public/` via ASSETS
 - `wrangler.jsonc` — name, routes (custom domains apex + www), assets binding
 - `tools/gen_og.py` — regenerates `public/assets/og.png` (pure stdlib)
-- `tools/seo_audit.py` — 137-check on-page/sitemap/feed/link audit of the live site
+- `tools/seo_audit.py` — 157-check on-page/sitemap/feed/link audit of the live site
 - `tools/rum_baseline.py` — weekly Web Analytics baseline via GraphQL
 - `tools/edge_requests.py` — server-side edge-request baseline via GraphQL
   (crawler visibility the RUM beacon can't see: Googlebot/Bingbot/etc. fetches
   of robots/sitemap/feed/pages; free-plan windows capped at 1d, sliced+merged)
 - `tools/indexnow_ping.py` — submits sitemap URLs to IndexNow (Bing/Yandex)
 - `tools/bing_webmaster.py` — Bing Webmaster API client (URL submission via
-  SubmitUrlBatch + verifiable index/crawl/query stats). Needs the
-  `BING_WEBMASTER_API_KEY` env var (owner action; never committed).
+  SubmitUrlBatch + verifiable index/crawl/query stats). Reads the configured
+  `BING_WEBMASTER_API_KEY` environment variable; the key is never committed.
 - `tools/gen_feed.py` — regenerates `public/feed.xml` (Atom) from the journal index
 
 ## Deploy

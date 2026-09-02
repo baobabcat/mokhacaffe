@@ -7,9 +7,9 @@ This tool counts ACTUAL edge requests for the zone, grouped by path + status
 (+ user-agent family), so we can see whether search crawlers (Bingbot,
 Googlebot, DuckDuckBot, YandexBot) have fetched robots.txt / sitemap.xml /
 feed.xml / pages — the leading indicator on the indexing pipeline. Search
-Console + Bing Webmaster Tools were verified by the owner on 2026-08-31
-(sitemap submitted to both), but neither console is reachable from this VM,
-so edge telemetry remains our only indexing-progress signal.
+Search Console + Bing Webmaster Tools were verified by the owner on 2026-08-31
+(sitemap submitted to both). Bing API telemetry is now available from this VM;
+edge telemetry still shows crawler requests that browser analytics misses.
 
 Read-only. Requires CLOUDFLARE_API_TOKEN in env (same token as deploys).
 

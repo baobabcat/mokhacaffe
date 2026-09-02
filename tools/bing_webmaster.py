@@ -54,7 +54,7 @@ def get_key() -> str:
         sys.exit(
             "error: BING_WEBMASTER_API_KEY is not set.\n"
             "Generate one in Bing Webmaster Tools -> Settings -> API access,\n"
-            "then export it (never commit it). See NEEDS_OWNER_ACTION.md."
+            "then export it (never commit it)."
         )
     return key
 
