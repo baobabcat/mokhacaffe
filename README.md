@@ -13,6 +13,9 @@ Cloudflare Workers Static Assets, served by a tiny Worker that 301s www → apex
   via separate GraphQL grouping aliases (browser-only, excludes bot and every
   mokhacaffe.com subdomain from its referrer summary; aborts rather than report
   potentially truncated groups; never queries visitor IPs)
+- Google Analytics 4 measurement `G-HJNKHJZZLL` is installed on every HTML page.
+  The CSP permits only the required Google tag and analytics origins and
+  authorizes the inline initializer by SHA-256 rather than `'unsafe-inline'`.
 - `tools/edge_requests.py` — server-side edge-request baseline via GraphQL
   (successful canonical-page requests plus crawler visibility the RUM beacon
   cannot see; Free-plan windows are capped at one day, then sliced and merged)
