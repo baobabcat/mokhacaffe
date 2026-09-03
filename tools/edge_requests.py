@@ -3,8 +3,10 @@
 
 Complements rum_baseline.py: the RUM beacon only fires on real browsers that
 execute JS — crawlers, feed readers, and HEAD/GET bots are invisible there.
-This tool counts ACTUAL edge requests for the zone, grouped by path + status
-(+ user-agent family), so we can see whether search crawlers (Bingbot,
+This tool counts actual edge requests for the zone, grouped by path, method,
+status, and user agent. It separately counts successful requests to canonical
+HTML pages, so scanner probes and asset fetches do not inflate that content
+number. It also shows whether search crawlers (Bingbot,
 Googlebot, DuckDuckBot, YandexBot) have fetched robots.txt / sitemap.xml /
 feed.xml / pages — the leading indicator on the indexing pipeline. Search
 Search Console + Bing Webmaster Tools were verified by the owner on 2026-08-31
@@ -30,12 +32,74 @@ QUERY = """query($zone: String!, $since: Time!, $until: Time!) {
     httpRequestsAdaptiveGroups(limit: 500,
         filter: {datetime_geq: $since, datetime_leq: $until}) {
       count
-      dimensions { clientRequestPath edgeResponseStatus userAgent }
+      dimensions {
+        clientRequestPath
+        edgeResponseStatus
+        clientRequestHTTPMethodName
+        userAgent
+      }
     } } } }"""
 
 BOT_UAS = ("googlebot", "bingbot", "duckduckbot", "yandexbot", "baiduspider",
            "slurp", "applebot", "petalbot", "seznambot", "gptbot",
            "claudebot", "perplexitybot", "bytespider")
+CANONICAL_CONTENT_PATHS = {
+    "/", "/story/", "/journal/", "/contact/",
+    "/journal/what-mocha-really-means/",
+    "/journal/moka-pot-properly/",
+    "/journal/yemeni-coffee-today/",
+    "/journal/qishr-yemeni-ginger-coffee/",
+}
+
+
+def merge_group_rows(rows):
+    """Merge GraphQL rows while retaining dimensions used by reports."""
+    dimensions = (
+        "clientRequestPath",
+        "edgeResponseStatus",
+        "clientRequestHTTPMethodName",
+        "userAgent",
+    )
+    merged = {}
+    for row in rows:
+        values = row["dimensions"]
+        key = tuple(values.get(name) for name in dimensions)
+        merged[key] = merged.get(key, 0) + row["count"]
+    return [
+        {
+            "count": count,
+            "dimensions": dict(zip(dimensions, key)),
+        }
+        for key, count in merged.items()
+    ]
+
+
+def canonical_content_requests(groups):
+    """Aggregate successful GET/HEAD requests to canonical HTML pages."""
+    requests = {}
+    for group in groups:
+        dimensions = group["dimensions"]
+        path = dimensions.get("clientRequestPath")
+        if (
+            path in CANONICAL_CONTENT_PATHS
+            and dimensions.get("edgeResponseStatus") == 200
+            and dimensions.get("clientRequestHTTPMethodName") in ("GET", "HEAD")
+        ):
+            requests[path] = requests.get(path, 0) + group["count"]
+    return requests
+
+
+def format_acquisition(groups):
+    """Format successful canonical-content request counts."""
+    content = canonical_content_requests(groups)
+    lines = [
+        "## canonical content requests",
+        f"canonical content requests: {sum(content.values())}",
+    ]
+    for path, count in sorted(content.items(), key=lambda item: (-item[1], item[0])):
+        lines.append(f"{count:>6}  {path}")
+    lines.append("note: request counts are not unique visitors; bot and self traffic may remain.")
+    return "\n".join(lines)
 
 
 def run(token, since, until):
@@ -66,22 +130,14 @@ def main():
     # (verified 2026-08-31, GraphQL 'quota' error) — query daily slices and
     # merge. Overlapping boundary rows are double-counted at slice seams; at
     # ~150 req/day this rounding noise is immaterial and stated here.
-    groups = {}
+    rows = []
     cursor = start
     while cursor < now:
         nxt = min(cursor + timedelta(hours=24), now)
-        for g in run(token, cursor.strftime("%Y-%m-%dT%H:%M:%SZ"),
-                     nxt.strftime("%Y-%m-%dT%H:%M:%SZ")):
-            d = g["dimensions"]
-            key = (d["clientRequestPath"], d["edgeResponseStatus"],
-                   d.get("userAgent"))
-            groups[key] = groups.get(key, 0) + g["count"]
+        rows.extend(run(token, cursor.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                        nxt.strftime("%Y-%m-%dT%H:%M:%SZ")))
         cursor = nxt
-    groups = [{"count": c,
-               "dimensions": {"clientRequestPath": k[0],
-                              "edgeResponseStatus": k[1],
-                              "userAgent": k[2]}}
-              for k, c in groups.items()]
+    groups = merge_group_rows(rows)
     total = sum(g["count"] for g in groups)
     print(f"# Edge requests, last {args.hours}h (since "
           f"{start.strftime('%Y-%m-%dT%H:%M:%SZ')}) — zone mokhacaffe.com")
@@ -102,6 +158,8 @@ def main():
         by_status[s] = by_status.get(s, 0) + g["count"]
     for s, c in sorted(by_status.items(), key=lambda x: -x[1]):
         print(f"{c:>6}  HTTP {s}")
+
+    print("\n" + format_acquisition(groups))
 
     print("\n## search/AI crawler user-agents (indexing pipeline signal)")
     bot_total = 0

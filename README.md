@@ -9,10 +9,13 @@ Cloudflare Workers Static Assets, served by a tiny Worker that 301s www → apex
 - `wrangler.jsonc` — name, routes (custom domains apex + www), assets binding
 - `tools/gen_og.py` — regenerates `public/assets/og.png` (pure stdlib)
 - `tools/seo_audit.py` — 157-check on-page/sitemap/feed/link audit of the live site
-- `tools/rum_baseline.py` — weekly Web Analytics baseline via GraphQL
+- `tools/rum_baseline.py` — Web Analytics pageload and external-referrer baseline
+  via separate GraphQL grouping aliases (browser-only, excludes bot and every
+  mokhacaffe.com subdomain from its referrer summary; aborts rather than report
+  potentially truncated groups; never queries visitor IPs)
 - `tools/edge_requests.py` — server-side edge-request baseline via GraphQL
-  (crawler visibility the RUM beacon can't see: Googlebot/Bingbot/etc. fetches
-  of robots/sitemap/feed/pages; free-plan windows capped at 1d, sliced+merged)
+  (successful canonical-page requests plus crawler visibility the RUM beacon
+  cannot see; Free-plan windows are capped at one day, then sliced and merged)
 - `tools/indexnow_ping.py` — submits sitemap URLs to IndexNow (Bing/Yandex)
 - `tools/bing_webmaster.py` — Bing Webmaster API client (URL submission via
   SubmitUrlBatch + verifiable index/crawl/query stats). Reads the configured
