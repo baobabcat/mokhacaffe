@@ -17,6 +17,8 @@ class PageParser(HTMLParser):
         self.title = ""
         self.in_title = False
         self.h1_count = 0
+        self.h1_text = ""
+        self.in_h1 = False
         self.metas = []
         self.links = []
         self.anchors = []
@@ -29,6 +31,7 @@ class PageParser(HTMLParser):
             self.in_title = True
         elif tag == "h1":
             self.h1_count += 1
+            self.in_h1 = True
         elif tag == "meta":
             self.metas.append(attributes)
         elif tag == "link":
@@ -42,12 +45,16 @@ class PageParser(HTMLParser):
     def handle_endtag(self, tag):
         if tag == "title":
             self.in_title = False
+        elif tag == "h1":
+            self.in_h1 = False
         elif tag == "script":
             self.in_jsonld = False
 
     def handle_data(self, data):
         if self.in_title:
             self.title += data
+        if self.in_h1:
+            self.h1_text += data
         if self.in_jsonld and self.jsonld:
             self.jsonld[-1] += data
 
@@ -88,6 +95,21 @@ class ContentStrategyTests(unittest.TestCase):
         namespace = {"s": "http://www.sitemaps.org/schemas/sitemap/0.9"}
         urls = [node.text for node in sitemap.findall("s:url/s:loc", namespace)]
         self.assertIn("https://mokhacaffe.com/better-coffee-at-home/", urls)
+
+    def test_story_headline_matches_emerging_search_intent(self):
+        story = parse(PUBLIC / "story" / "index.html")
+        headline = story.h1_text.lower()
+        self.assertIn("al-mokha", headline)
+        self.assertIn("port", headline)
+        self.assertIn("coffee", headline)
+
+    def test_story_has_article_structured_data(self):
+        story = parse(PUBLIC / "story" / "index.html")
+        blocks = [json.loads(block) for block in story.jsonld]
+        articles = [block for block in blocks if block.get("@type") == "Article"]
+        self.assertEqual(len(articles), 1)
+        self.assertEqual(articles[0].get("url"), "https://mokhacaffe.com/story/")
+        self.assertEqual(articles[0].get("headline"), "Al-Mokha: the port that named coffee")
 
     def test_every_indexable_page_title_fits_search_results(self):
         for path in PUBLIC.rglob("index.html"):
