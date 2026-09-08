@@ -116,6 +116,22 @@ class ContentStrategyTests(unittest.TestCase):
             with self.subTest(path=path.relative_to(PUBLIC)):
                 self.assertLessEqual(len(parse(path).title.strip()), 60)
 
+    def test_public_email_addresses_use_the_official_domain(self):
+        official_email = "hello@mokhacaffe.com"
+        contact_html = (PUBLIC / "contact" / "index.html").read_text()
+        self.assertIn(f'href="mailto:{official_email}"', contact_html)
+        self.assertIn(f">{official_email}</a>", contact_html)
+        self.assertNotIn("interim address", contact_html.lower())
+        self.assertNotIn("mail routing is being set up", contact_html.lower())
+
+        for path in PUBLIC.rglob("*.html"):
+            with self.subTest(path=path.relative_to(PUBLIC)):
+                html = path.read_text()
+                for href in parse(path).anchors:
+                    if href.startswith("mailto:"):
+                        self.assertEqual(f"mailto:{official_email}", href)
+                self.assertNotIn("baobabcatllc@icloud.com", html.lower())
+
 
 if __name__ == "__main__":
     unittest.main()
