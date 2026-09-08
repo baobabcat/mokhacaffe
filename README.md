@@ -16,6 +16,9 @@ Cloudflare Workers Static Assets, served by a tiny Worker that 301s www → apex
 - Google Analytics 4 measurement `G-HJNKHJZZLL` is installed on every HTML page.
   The CSP permits only the required Google tag and analytics origins and
   authorizes the inline initializer by SHA-256 rather than `'unsafe-inline'`.
+  The contact page records a `contact_intent` event with `contact_method=email`
+  when a visitor opens the official email link. This measures intent, not a sent
+  message or a qualified lead.
 - `tools/edge_requests.py` — server-side edge-request baseline via GraphQL
   (successful canonical-page requests plus crawler visibility the RUM beacon
   cannot see; Free-plan windows are capped at one day, then sliced and merged)
