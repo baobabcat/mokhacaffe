@@ -78,6 +78,19 @@ class GoogleAnalyticsTests(unittest.TestCase):
             self.assertIn(required, csp)
         self.assertNotIn("'unsafe-inline'", csp)
 
+    def test_official_email_click_records_contact_intent(self):
+        contact = (PUBLIC / "contact" / "index.html").read_text()
+        self.assertIn(
+            '<a href="mailto:hello@mokhacaffe.com" data-analytics-event="contact_intent">',
+            contact,
+        )
+        self.assertIn('<script defer src="/assets/analytics-events.js"></script>', contact)
+
+        script = (PUBLIC / "assets" / "analytics-events.js").read_text()
+        self.assertIn("[data-analytics-event]", script)
+        self.assertIn("window.gtag('event', eventName", script)
+        self.assertIn("contact_method: 'email'", script)
+
 
 if __name__ == "__main__":
     unittest.main()
