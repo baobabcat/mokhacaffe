@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Coffee Ratio Calculator | Mokha Caffè</title>
+  <meta name="description" content="Calculate coffee or water by weight from a brewing ratio, then adjust the result to suit your filter coffee and your taste.">
+  <link rel="canonical" href="https://mokhacaffe.com/coffee-ratio-calculator/">
+  <link rel="alternate" type="application/atom+xml" title="Mokha Caffè Journal" href="/feed.xml">
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/assets/styles.css">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Mokha Caffè">
+  <meta property="og:title" content="Coffee ratio calculator">
+  <meta property="og:description" content="Turn a coffee-to-water ratio into the weights you need for your next brew.">
+  <meta property="og:url" content="https://mokhacaffe.com/coffee-ratio-calculator/">
+  <meta property="og:image" content="https://mokhacaffe.com/assets/og.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-HJNKHJZZLL"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-HJNKHJZZLL');
+  </script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <header class="site-head">
+    <div class="wrap">
+      <a class="wordmark" href="/">Mokha <em>Caffè</em></a>
+      <nav class="site-nav" aria-label="Primary">
+        <a href="/better-coffee-at-home/">Start here</a>
+        <a href="/story/">Story</a>
+        <a href="/journal/">Journal</a>
+        <a href="/contact/">Contact</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <article class="article calculator-page">
+      <div class="wrap">
+        <div class="measure">
+          <p class="eyebrow">Better coffee at home</p>
+          <h1>Coffee ratio <em>calculator</em></h1>
+          <p class="lede">Enter the amount you know and choose a coffee-to-water ratio. The calculator gives you the other weight.</p>
+
+          <form id="ratio-form" class="ratio-calculator">
+            <fieldset>
+              <legend>I know my</legend>
+              <label><input type="radio" name="direction" value="water" checked> Water amount</label>
+              <label><input type="radio" name="direction" value="coffee"> Coffee amount</label>
+            </fieldset>
+
+            <label for="amount">Amount in grams</label>
+            <input id="amount" name="amount" type="number" min="0.1" step="0.1" value="320" required inputmode="decimal">
+
+            <label for="ratio">Water parts for each part coffee</label>
+            <div class="ratio-row"><span>1 :</span><input id="ratio" name="ratio" type="number" min="1" step="0.1" value="16" required inputmode="decimal"></div>
+
+            <button type="submit" class="btn primary">Calculate</button>
+          </form>
+
+          <output id="result" aria-live="polite" for="amount ratio" class="ratio-result">Use 20 g of coffee for 320 g of water.</output>
+
+          <div class="body">
+            <h2>A starting point, not a rule</h2>
+            <p>For filter coffee, 1:16 is a practical place to begin. If the strength is wrong but the flavor is pleasant, adjust the ratio on the next brew. Keep grind, time, and water temperature steady while you test.</p>
+            <p>Water weighs about one gram per millilitre for everyday brewing, so 320 g of water is roughly 320 ml.</p>
+            <div class="note">
+              <strong>Diagnose flavor separately.</strong> If the coffee tastes sour, hollow, bitter, or dry, changing the ratio may not fix it. Use the troubleshooting steps in our <a href="/better-coffee-at-home/">better coffee at home guide</a> before changing several variables at once.
+            </div>
+            <hr class="rule">
+            <p><a href="/better-coffee-at-home/">Read the full home brewing guide →</a> · <a href="/contact/">Send a question or correction →</a></p>
+          </div>
+        </div>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site-foot">
+    <div class="wrap">
+      <div class="cols">
+        <div>
+          <div class="brand">Mokha <em>Caffè</em></div>
+          <p>A specialty coffee brand in its founding stage, named for Al-Mokha, Yemen, the port that shipped coffee to the world.</p>
+        </div>
+        <nav class="foot-nav" aria-label="Footer">
+          <a href="/better-coffee-at-home/">Start here</a>
+          <a href="/story/">Story</a>
+          <a href="/journal/">Journal</a>
+          <a href="/contact/">Contact</a>
+        </nav>
+      </div>
+      <div class="legal">
+        <span>© 2026 Mokha Caffè. All rights reserved.</span>
+        <span>Built and maintained with AI assistance under human direction.</span>
+      </div>
+    </div>
+  </footer>
+  <script type="module" src="/assets/ratio-calculator-page.mjs"></script>
+  <!-- Cloudflare Web Analytics --><script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "ad511722c9b244fd8123666ecedafb00"}'></script><!-- End Cloudflare Web Analytics -->
+</body>
+</html>

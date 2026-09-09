@@ -258,6 +258,60 @@ hr.rule { border: none; border-top: 1px solid var(--line); margin: 2.6rem 0; }
 }
 .note strong { color: var(--ink); }
 
+/* ---------- ratio calculator ---------- */
+.calculator-page .lede { margin-bottom: 1.5rem; }
+.ratio-calculator {
+  display: grid;
+  gap: 0.8rem;
+  margin: 1.5rem 0 1rem;
+  padding: clamp(1.2rem, 4vw, 1.7rem);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--bg-2);
+}
+.ratio-calculator fieldset {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.2rem;
+  margin: 0 0 0.4rem;
+  padding: 0;
+  border: 0;
+}
+.ratio-calculator legend { margin-bottom: 0.45rem; }
+.ratio-calculator label { color: #e4d7c4; }
+.ratio-calculator input[type="number"] {
+  width: 100%;
+  padding: 0.72rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 7px;
+  background: var(--bg);
+  color: var(--ink);
+  font: inherit;
+}
+.ratio-calculator input:focus-visible {
+  outline: 2px solid var(--accent-2);
+  outline-offset: 3px;
+}
+.ratio-calculator .ratio-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.65rem;
+}
+.ratio-calculator button { width: fit-content; cursor: pointer; margin-top: 0.4rem; }
+.ratio-result {
+  display: block;
+  padding: 1.2rem 1.4rem;
+  border-left: 3px solid var(--accent);
+  border-radius: 0 10px 10px 0;
+  background: var(--bg-2);
+  color: var(--ink);
+  font-size: 1.12rem;
+}
+@media (max-width: 34rem) {
+  .ratio-calculator fieldset { display: grid; }
+}
+
 /* ---------- journal list ---------- */
 .post-list { list-style: none; margin: 0; padding: 0; }
 .post-list li { border-top: 1px solid var(--line); padding: 1.6rem 0; }

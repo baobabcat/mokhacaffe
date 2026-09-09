@@ -44,11 +44,13 @@ BOT_UAS = ("googlebot", "bingbot", "duckduckbot", "yandexbot", "baiduspider",
            "slurp", "applebot", "petalbot", "seznambot", "gptbot",
            "claudebot", "perplexitybot", "bytespider")
 CANONICAL_CONTENT_PATHS = {
-    "/", "/story/", "/journal/", "/contact/",
+    "/", "/better-coffee-at-home/", "/coffee-ratio-calculator/",
+    "/story/", "/journal/", "/contact/",
     "/journal/what-mocha-really-means/",
     "/journal/moka-pot-properly/",
     "/journal/yemeni-coffee-today/",
     "/journal/qishr-yemeni-ginger-coffee/",
+    "/journal/how-to-read-a-coffee-bag/",
 }
 
 

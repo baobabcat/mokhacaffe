@@ -8,7 +8,10 @@ Cloudflare Workers Static Assets, served by a tiny Worker that 301s www → apex
 - `src/index.js` — Worker: www→apex 301, then serves `public/` via ASSETS
 - `wrangler.jsonc` — name, routes (custom domains apex + www), assets binding
 - `tools/gen_og.py` — regenerates `public/assets/og.png` (pure stdlib)
-- `tools/seo_audit.py` — 157-check on-page/sitemap/feed/link audit of the live site
+- `tools/seo_audit.py` — on-page/sitemap/feed/link audit of the live site
+- `/coffee-ratio-calculator/` — browser-only coffee-to-water calculator linked
+  from the Better Coffee at Home guide. It sends a `ratio_calculation` GA4 event
+  on form submission with only the calculation direction, never entered amounts.
 - `tools/rum_baseline.py` — Web Analytics pageload and external-referrer baseline
   via separate GraphQL grouping aliases (browser-only, excludes bot and every
   mokhacaffe.com subdomain from its referrer summary; aborts rather than report

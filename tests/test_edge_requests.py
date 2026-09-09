@@ -51,6 +51,28 @@ class AcquisitionSummaryTests(unittest.TestCase):
         self.assertNotIn("spam.example", report)
         self.assertNotIn("external referrers", report)
 
+    def test_acquisition_report_shows_calculator_as_canonical_content(self):
+        groups = [group(2, "/coffee-ratio-calculator/")]
+
+        self.assertEqual(
+            edge_requests.canonical_content_requests(groups),
+            {"/coffee-ratio-calculator/": 2},
+        )
+
+    def test_acquisition_report_shows_published_hub_and_guide(self):
+        groups = [
+            group(2, "/better-coffee-at-home/"),
+            group(3, "/journal/how-to-read-a-coffee-bag/"),
+        ]
+
+        self.assertEqual(
+            edge_requests.canonical_content_requests(groups),
+            {
+                "/better-coffee-at-home/": 2,
+                "/journal/how-to-read-a-coffee-bag/": 3,
+            },
+        )
+
     def test_query_requests_method_but_not_unavailable_referrer(self):
         self.assertIn("clientRequestHTTPMethodName", edge_requests.QUERY)
         self.assertNotIn("clientRefererHost", edge_requests.QUERY)
