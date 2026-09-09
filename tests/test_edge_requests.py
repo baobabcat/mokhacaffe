@@ -59,10 +59,11 @@ class AcquisitionSummaryTests(unittest.TestCase):
             {"/coffee-ratio-calculator/": 2},
         )
 
-    def test_acquisition_report_shows_published_hub_and_guide(self):
+    def test_acquisition_report_shows_published_hub_and_guides(self):
         groups = [
             group(2, "/better-coffee-at-home/"),
             group(3, "/journal/how-to-read-a-coffee-bag/"),
+            group(4, "/journal/coffee-bean-types/"),
         ]
 
         self.assertEqual(
@@ -70,6 +71,7 @@ class AcquisitionSummaryTests(unittest.TestCase):
             {
                 "/better-coffee-at-home/": 2,
                 "/journal/how-to-read-a-coffee-bag/": 3,
+                "/journal/coffee-bean-types/": 4,
             },
         )
 

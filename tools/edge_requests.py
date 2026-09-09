@@ -51,6 +51,7 @@ CANONICAL_CONTENT_PATHS = {
     "/journal/yemeni-coffee-today/",
     "/journal/qishr-yemeni-ginger-coffee/",
     "/journal/how-to-read-a-coffee-bag/",
+    "/journal/coffee-bean-types/",
 }
 
 
