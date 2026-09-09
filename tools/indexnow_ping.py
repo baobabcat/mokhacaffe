@@ -10,6 +10,7 @@ Usage: python3 tools/indexnow_ping.py [--dry-run]
 Reads the key from the single hex-named .txt file in public/ and URLs from public/sitemap.xml.
 Exit 0 on HTTP 200/202 (accepted), 1 otherwise.
 """
+import argparse
 import glob
 import json
 import re
@@ -45,8 +46,20 @@ def sitemap_urls() -> list[str]:
     return [(loc.text or "").strip() for loc in tree.findall(".//sm:loc", ns) if loc.text]
 
 
-def main() -> int:
-    dry = "--dry-run" in sys.argv
+def parse_args(argv=None):
+    parser = argparse.ArgumentParser(
+        description="Submit every URL in public/sitemap.xml to IndexNow."
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="print the payload without sending it",
+    )
+    return parser.parse_args(argv)
+
+
+def main(argv=None) -> int:
+    args = parse_args(argv)
     key = find_key()
     urls = sitemap_urls()
     payload = {
@@ -58,7 +71,7 @@ def main() -> int:
     print(f"key={key} urls={len(urls)} keyLocation={payload['keyLocation']}")
     for u in urls:
         print(f"  {u}")
-    if dry:
+    if args.dry_run:
         print("dry-run: not posting")
         return 0
     req = urllib.request.Request(
