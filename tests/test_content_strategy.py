@@ -161,6 +161,7 @@ class ContentStrategyTests(unittest.TestCase):
         self.assertEqual(len(articles), 1)
         self.assertEqual(articles[0].get("datePublished"), "2026-09-09")
         self.assertEqual(articles[0].get("image"), "https://mokhacaffe.com/assets/og.png")
+        self.assertIn('class="dropcap">A&nbsp;bag ', guide_file.read_text())
 
         for source in (
             PUBLIC / "index.html",
