@@ -96,6 +96,27 @@ class ContentStrategyTests(unittest.TestCase):
         urls = [node.text for node in sitemap.findall("s:url/s:loc", namespace)]
         self.assertIn("https://mokhacaffe.com/better-coffee-at-home/", urls)
 
+    def test_coffee_bag_guide_is_published_and_connected_to_hub(self):
+        guide_path = "/journal/how-to-read-a-coffee-bag/"
+        guide = parse(PUBLIC / "journal" / "how-to-read-a-coffee-bag" / "index.html")
+        articles = [
+            json.loads(block)
+            for block in guide.jsonld
+            if json.loads(block).get("@type") == "Article"
+        ]
+
+        self.assertEqual(len(articles), 1)
+        self.assertEqual(articles[0].get("datePublished"), "2026-09-09")
+        self.assertIn(HUB_PATH, guide.anchors)
+        self.assertIn(guide_path, parse(PUBLIC / "index.html").anchors)
+        self.assertIn(guide_path, parse(PUBLIC / "journal" / "index.html").anchors)
+        self.assertIn(guide_path, parse(HUB_FILE).anchors)
+
+        sitemap = ET.parse(PUBLIC / "sitemap.xml")
+        namespace = {"s": "http://www.sitemaps.org/schemas/sitemap/0.9"}
+        urls = [node.text for node in sitemap.findall("s:url/s:loc", namespace)]
+        self.assertIn("https://mokhacaffe.com" + guide_path, urls)
+
     def test_story_headline_matches_emerging_search_intent(self):
         story = parse(PUBLIC / "story" / "index.html")
         headline = story.h1_text.lower()
