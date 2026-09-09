@@ -132,6 +132,71 @@ class ContentStrategyTests(unittest.TestCase):
         self.assertEqual(articles[0].get("url"), "https://mokhacaffe.com/story/")
         self.assertEqual(articles[0].get("headline"), "Al-Mokha: the port that named coffee")
 
+    def test_coffee_bean_types_guide_is_published_and_connected(self):
+        guide_path = "/journal/coffee-bean-types/"
+        guide_file = PUBLIC / "journal" / "coffee-bean-types" / "index.html"
+        self.assertTrue(guide_file.exists())
+
+        guide = parse(guide_file)
+        description = next(
+            (item.get("content", "") for item in guide.metas if item.get("name") == "description"),
+            "",
+        )
+        canonical = [
+            item.get("href")
+            for item in guide.links
+            if "canonical" in item.get("rel", "")
+        ]
+        articles = [
+            json.loads(block)
+            for block in guide.jsonld
+            if json.loads(block).get("@type") == "Article"
+        ]
+
+        self.assertIn("coffee bean types", guide.title.lower())
+        self.assertEqual(guide.h1_count, 1)
+        self.assertGreaterEqual(len(description), 50)
+        self.assertLessEqual(len(description), 170)
+        self.assertEqual(canonical, ["https://mokhacaffe.com" + guide_path])
+        self.assertEqual(len(articles), 1)
+        self.assertEqual(articles[0].get("datePublished"), "2026-09-09")
+        self.assertEqual(articles[0].get("image"), "https://mokhacaffe.com/assets/og.png")
+
+        for source in (
+            PUBLIC / "index.html",
+            PUBLIC / "journal" / "index.html",
+            HUB_FILE,
+        ):
+            with self.subTest(source=source.relative_to(PUBLIC)):
+                self.assertIn(guide_path, parse(source).anchors)
+
+        for target in (
+            HUB_PATH,
+            "/journal/how-to-read-a-coffee-bag/",
+            "/coffee-ratio-calculator/",
+        ):
+            with self.subTest(target=target):
+                self.assertIn(target, guide.anchors)
+
+        sitemap = ET.parse(PUBLIC / "sitemap.xml")
+        namespace = {"s": "http://www.sitemaps.org/schemas/sitemap/0.9"}
+        urls = [node.text for node in sitemap.findall("s:url/s:loc", namespace)]
+        self.assertIn("https://mokhacaffe.com" + guide_path, urls)
+
+    def test_article_structured_data_has_search_image(self):
+        article_pages = 0
+        for path in PUBLIC.rglob("index.html"):
+            blocks = [json.loads(block) for block in parse(path).jsonld]
+            for block in blocks:
+                if block.get("@type") == "Article":
+                    article_pages += 1
+                    with self.subTest(path=path.relative_to(PUBLIC)):
+                        self.assertEqual(
+                            block.get("image"),
+                            "https://mokhacaffe.com/assets/og.png",
+                        )
+        self.assertGreater(article_pages, 0)
+
     def test_every_indexable_page_title_fits_search_results(self):
         for path in PUBLIC.rglob("index.html"):
             with self.subTest(path=path.relative_to(PUBLIC)):
