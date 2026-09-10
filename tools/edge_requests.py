@@ -15,7 +15,7 @@ edge telemetry still shows crawler requests that browser analytics misses.
 
 Read-only. Requires CLOUDFLARE_API_TOKEN in env (same token as deploys).
 
-Usage: python3 tools/edge_requests.py [--hours 168] [--ua]
+Usage: python3 tools/edge_requests.py [--hours 168]
 """
 import argparse
 import json
@@ -92,16 +92,40 @@ def canonical_content_requests(groups):
     return requests
 
 
+def canonical_content_request_split(groups):
+    """Split canonical requests into known crawlers and all other user agents."""
+    crawler = 0
+    other = 0
+    for group in groups:
+        dimensions = group["dimensions"]
+        if (
+            dimensions.get("clientRequestPath") in CANONICAL_CONTENT_PATHS
+            and dimensions.get("edgeResponseStatus") == 200
+            and dimensions.get("clientRequestHTTPMethodName") in ("GET", "HEAD")
+        ):
+            ua = (dimensions.get("userAgent") or "").lower()
+            if any(bot in ua for bot in BOT_UAS):
+                crawler += group["count"]
+            else:
+                other += group["count"]
+    return crawler, other
+
+
 def format_acquisition(groups):
     """Format successful canonical-content request counts."""
     content = canonical_content_requests(groups)
+    crawler, other = canonical_content_request_split(groups)
     lines = [
         "## canonical content requests",
         f"canonical content requests: {sum(content.values())}",
+        f"canonical content requests with a known crawler signature: {crawler}",
+        f"other canonical content requests: {other}",
     ]
     for path, count in sorted(content.items(), key=lambda item: (-item[1], item[0])):
         lines.append(f"{count:>6}  {path}")
-    lines.append("note: request counts are not unique visitors; bot and self traffic may remain.")
+    lines.append(
+        "note: other requests are not verified human visits; self traffic and unidentified bots may remain."
+    )
     return "\n".join(lines)
 
 

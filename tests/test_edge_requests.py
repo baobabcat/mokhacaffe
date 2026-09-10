@@ -10,7 +10,7 @@ edge_requests = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(edge_requests)
 
 
-def group(count, path, status=200, method="GET", referrer=""):
+def group(count, path, status=200, method="GET", referrer="", user_agent="test-agent"):
     return {
         "count": count,
         "dimensions": {
@@ -18,7 +18,7 @@ def group(count, path, status=200, method="GET", referrer=""):
             "edgeResponseStatus": status,
             "clientRequestHTTPMethodName": method,
             "clientRefererHost": referrer,
-            "userAgent": "test-agent",
+            "userAgent": user_agent,
         },
     }
 
@@ -74,6 +74,19 @@ class AcquisitionSummaryTests(unittest.TestCase):
                 "/journal/coffee-bean-types/": 4,
             },
         )
+
+    def test_acquisition_report_separates_known_crawlers_from_other_requests(self):
+        groups = [
+            group(4, "/journal/coffee-bean-types/", user_agent="Googlebot/2.1"),
+            group(3, "/journal/coffee-bean-types/", user_agent="Mozilla/5.0"),
+        ]
+
+        report = edge_requests.format_acquisition(groups)
+
+        self.assertIn("canonical content requests with a known crawler signature: 4", report)
+        self.assertIn("other canonical content requests: 3", report)
+        self.assertIn("not verified human visits", report)
+        self.assertEqual(sum(edge_requests.canonical_content_request_split(groups)), 7)
 
     def test_query_requests_method_but_not_unavailable_referrer(self):
         self.assertIn("clientRequestHTTPMethodName", edge_requests.QUERY)
