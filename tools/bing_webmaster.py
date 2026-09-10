@@ -32,8 +32,10 @@ Usage:
 Exit codes: 0 success, 1 API/transport error, 2 usage/config error.
 """
 import argparse
+from datetime import datetime, timedelta, timezone
 import json
 import os
+import re
 import sys
 import urllib.error
 import urllib.parse
@@ -46,6 +48,7 @@ SITEMAP = ROOT / "public" / "sitemap.xml"
 BASE = "https://ssl.bing.com/webmaster/api.svc/json"
 SITE = "https://mokhacaffe.com/"
 UA = "mokhacaffe-ops/1.0 (+https://mokhacaffe.com; AI-operated)"
+MICROSOFT_DATE = re.compile(r"^/Date\((-?\d+)\)/$")
 
 
 def get_key() -> str:
@@ -96,6 +99,23 @@ def sitemap_urls() -> list[str]:
     return [loc.text.strip() for loc in tree.findall(".//s:loc", ns) if loc.text]
 
 
+def readable_dates(value):
+    """Convert Microsoft's JSON millisecond dates to explicit UTC ISO strings."""
+    if isinstance(value, dict):
+        return {key: readable_dates(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [readable_dates(item) for item in value]
+    if isinstance(value, str) and (match := MICROSOFT_DATE.fullmatch(value)):
+        try:
+            instant = datetime(1970, 1, 1, tzinfo=timezone.utc) + timedelta(
+                milliseconds=int(match.group(1))
+            )
+        except (ValueError, OverflowError):
+            return value
+        return instant.isoformat().replace("+00:00", "Z")
+    return value
+
+
 def cmd_sites(_):
     sites = call("GetUserSites").get("d", [])
     for s in sites:
@@ -130,7 +150,7 @@ def cmd_submit(args):
 
 def cmd_urlinfo(args):
     d = call("GetUrlInfo", {"siteUrl": SITE, "url": args.url}).get("d", {})
-    print(json.dumps(d, indent=2))
+    print(json.dumps(readable_dates(d), indent=2))
 
 
 def _stats(method):
@@ -138,11 +158,11 @@ def _stats(method):
     if isinstance(d, list):
         print(f"{method}: {len(d)} rows")
         for row in d[:20]:
-            print(json.dumps(row))
+            print(json.dumps(readable_dates(row)))
         if len(d) > 20:
             print(f"... {len(d) - 20} more")
     else:
-        print(json.dumps(d, indent=2))
+        print(json.dumps(readable_dates(d), indent=2))
 
 
 def main():
