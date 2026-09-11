@@ -40,7 +40,7 @@ class ScriptParser(HTMLParser):
 class GoogleAnalyticsTests(unittest.TestCase):
     def test_google_tag_is_on_every_html_page_and_allowed_by_csp(self):
         html_files = sorted(PUBLIC.rglob("*.html"))
-        self.assertEqual(13, len(html_files))
+        self.assertEqual(14, len(html_files))
 
         hashes = set()
         expected_src = (
@@ -80,16 +80,16 @@ class GoogleAnalyticsTests(unittest.TestCase):
 
     def test_official_email_click_records_contact_intent(self):
         contact = (PUBLIC / "contact" / "index.html").read_text()
-        self.assertIn(
-            '<a href="mailto:hello@mokhacaffe.com" data-analytics-event="contact_intent">',
-            contact,
-        )
+        self.assertEqual(3, contact.count('data-analytics-event="contact_intent"'))
+        for inquiry_type in ("first_roast", "wholesale", "press"):
+            self.assertIn(f'data-inquiry-type="{inquiry_type}"', contact)
         self.assertIn('<script defer src="/assets/analytics-events.js"></script>', contact)
 
         script = (PUBLIC / "assets" / "analytics-events.js").read_text()
         self.assertIn("[data-analytics-event]", script)
         self.assertIn("window.gtag('event', eventName", script)
         self.assertIn("contact_method: 'email'", script)
+        self.assertIn("inquiry_type: link.dataset.inquiryType", script)
 
 
 if __name__ == "__main__":

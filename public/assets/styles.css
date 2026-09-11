@@ -199,6 +199,14 @@ section.block { padding: clamp(2.75rem, 7vw, 5rem) 0; border-top: 1px solid var(
   margin: 0;
 }
 .card p { color: var(--muted); margin: 0; font-size: 0.98rem; }
+.article .body .card h2 {
+  font-family: var(--serif);
+  font-weight: 520;
+  font-size: 1.45rem;
+  line-height: 1.2;
+  margin: 0;
+}
+.article .body .card p { margin: 0; color: var(--muted); }
 .card .more { margin-top: auto; padding-top: 0.8rem; font-size: 0.9rem; letter-spacing: 0.06em; text-transform: uppercase; }
 .card.status-now { border-color: var(--accent); background: var(--bg-3); }
 
@@ -257,6 +265,34 @@ hr.rule { border: none; border-top: 1px solid var(--line); margin: 2.6rem 0; }
   margin: 1.8rem 0;
 }
 .note strong { color: var(--ink); }
+
+.table-wrap {
+  overflow-x: auto;
+  margin: 1.5rem 0 2rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.table-wrap table {
+  width: 100%;
+  min-width: 38rem;
+  border-collapse: collapse;
+  color: #e4d7c4;
+}
+.table-wrap th,
+.table-wrap td {
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+.table-wrap th {
+  background: var(--bg-3);
+  color: var(--ink);
+  font-size: 0.82rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.table-wrap tbody tr:last-child td { border-bottom: 0; }
 
 /* ---------- ratio calculator ---------- */
 .calculator-page .lede { margin-bottom: 1.5rem; }

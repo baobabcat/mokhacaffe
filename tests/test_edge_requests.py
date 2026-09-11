@@ -64,6 +64,7 @@ class AcquisitionSummaryTests(unittest.TestCase):
             group(2, "/better-coffee-at-home/"),
             group(3, "/journal/how-to-read-a-coffee-bag/"),
             group(4, "/journal/coffee-bean-types/"),
+            group(5, "/coffee-grind-size-chart/"),
         ]
 
         self.assertEqual(
@@ -72,6 +73,7 @@ class AcquisitionSummaryTests(unittest.TestCase):
                 "/better-coffee-at-home/": 2,
                 "/journal/how-to-read-a-coffee-bag/": 3,
                 "/journal/coffee-bean-types/": 4,
+                "/coffee-grind-size-chart/": 5,
             },
         )
 
@@ -116,9 +118,9 @@ class AcquisitionSummaryTests(unittest.TestCase):
 
         report = edge_requests.format_search_crawler_coverage(groups)
 
-        self.assertIn("googlebot: 2/12 canonical paths observed", report)
-        self.assertIn("bingbot: 1/12 canonical paths observed", report)
-        self.assertIn("duckduckbot: 0/12 canonical paths observed", report)
+        self.assertIn("googlebot: 2/13 canonical paths observed", report)
+        self.assertIn("bingbot: 1/13 canonical paths observed", report)
+        self.assertIn("duckduckbot: 0/13 canonical paths observed", report)
         self.assertIn("observed: /, /journal/", report)
         self.assertIn("observed: /story/", report)
         self.assertNotIn("/robots.txt", report)

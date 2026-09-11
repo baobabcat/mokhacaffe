@@ -184,6 +184,70 @@ class ContentStrategyTests(unittest.TestCase):
         urls = [node.text for node in sitemap.findall("s:url/s:loc", namespace)]
         self.assertIn("https://mokhacaffe.com" + guide_path, urls)
 
+    def test_grind_size_chart_is_published_and_connected(self):
+        chart_path = "/coffee-grind-size-chart/"
+        chart_file = PUBLIC / "coffee-grind-size-chart" / "index.html"
+        self.assertTrue(chart_file.exists())
+
+        chart = parse(chart_file)
+        description = next(
+            (item.get("content", "") for item in chart.metas if item.get("name") == "description"),
+            "",
+        )
+        canonical = [
+            item.get("href")
+            for item in chart.links
+            if "canonical" in item.get("rel", "")
+        ]
+        articles = [
+            json.loads(block)
+            for block in chart.jsonld
+            if json.loads(block).get("@type") == "Article"
+        ]
+
+        self.assertIn("coffee grind size chart", chart.title.lower())
+        self.assertEqual(chart.h1_count, 1)
+        self.assertGreaterEqual(len(description), 50)
+        self.assertLessEqual(len(description), 170)
+        self.assertEqual(canonical, ["https://mokhacaffe.com" + chart_path])
+        self.assertEqual(len(articles), 1)
+        self.assertEqual(articles[0].get("datePublished"), "2026-09-11")
+        self.assertEqual(articles[0].get("image"), "https://mokhacaffe.com/assets/og.png")
+
+        html = chart_file.read_text()
+        self.assertIn("<table", html)
+        self.assertIn('class="table-wrap"', html)
+        styles = (PUBLIC / "assets" / "styles.css").read_text()
+        self.assertIn(".table-wrap", styles)
+        self.assertIn("overflow-x: auto", styles)
+        self.assertIn("French press", html)
+        self.assertIn("Moka pot", html)
+        self.assertIn("Pour-over", html)
+        self.assertIn("AeroPress", html)
+        self.assertIn("Espresso", html)
+
+        for source in (
+            PUBLIC / "index.html",
+            HUB_FILE,
+            PUBLIC / "coffee-ratio-calculator" / "index.html",
+            PUBLIC / "journal" / "moka-pot-properly" / "index.html",
+        ):
+            with self.subTest(source=source.relative_to(PUBLIC)):
+                self.assertIn(chart_path, parse(source).anchors)
+
+        for target in (
+            HUB_PATH,
+            "/coffee-ratio-calculator/",
+            "/journal/moka-pot-properly/",
+        ):
+            with self.subTest(target=target):
+                self.assertIn(target, chart.anchors)
+
+        sitemap = ET.parse(PUBLIC / "sitemap.xml")
+        namespace = {"s": "http://www.sitemaps.org/schemas/sitemap/0.9"}
+        urls = [node.text for node in sitemap.findall("s:url/s:loc", namespace)]
+        self.assertIn("https://mokhacaffe.com" + chart_path, urls)
+
     def test_article_structured_data_has_search_image(self):
         article_pages = 0
         for path in PUBLIC.rglob("index.html"):
@@ -198,6 +262,11 @@ class ContentStrategyTests(unittest.TestCase):
                         )
         self.assertGreater(article_pages, 0)
 
+    def test_every_indexable_page_has_start_here_navigation(self):
+        for path in PUBLIC.rglob("index.html"):
+            with self.subTest(path=path.relative_to(PUBLIC)):
+                self.assertIn(HUB_PATH, parse(path).anchors)
+
     def test_every_indexable_page_title_fits_search_results(self):
         for path in PUBLIC.rglob("index.html"):
             with self.subTest(path=path.relative_to(PUBLIC)):
@@ -206,7 +275,7 @@ class ContentStrategyTests(unittest.TestCase):
     def test_public_email_addresses_use_the_official_domain(self):
         official_email = "hello@mokhacaffe.com"
         contact_html = (PUBLIC / "contact" / "index.html").read_text()
-        self.assertIn(f'href="mailto:{official_email}"', contact_html)
+        self.assertIn(f'href="mailto:{official_email}', contact_html)
         self.assertIn(f">{official_email}</a>", contact_html)
         self.assertNotIn("interim address", contact_html.lower())
         self.assertNotIn("mail routing is being set up", contact_html.lower())
@@ -216,7 +285,7 @@ class ContentStrategyTests(unittest.TestCase):
                 html = path.read_text()
                 for href in parse(path).anchors:
                     if href.startswith("mailto:"):
-                        self.assertEqual(f"mailto:{official_email}", href)
+                        self.assertEqual(official_email, href.removeprefix("mailto:").split("?", 1)[0])
                 self.assertNotIn("baobabcatllc@icloud.com", html.lower())
 
 

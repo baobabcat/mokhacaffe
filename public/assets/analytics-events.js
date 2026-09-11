@@ -5,6 +5,7 @@ document.querySelectorAll('[data-analytics-event]').forEach((link) => {
     const eventName = link.dataset.analyticsEvent;
     window.gtag('event', eventName, {
       contact_method: 'email',
+      inquiry_type: link.dataset.inquiryType || 'general',
     });
   });
 });
