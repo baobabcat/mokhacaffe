@@ -267,6 +267,11 @@ class ContentStrategyTests(unittest.TestCase):
             with self.subTest(path=path.relative_to(PUBLIC)):
                 self.assertIn(HUB_PATH, parse(path).anchors)
 
+    def test_every_indexable_page_has_a_visible_journal_feed_link(self):
+        for path in PUBLIC.rglob("index.html"):
+            with self.subTest(path=path.relative_to(PUBLIC)):
+                self.assertIn("/feed.xml", parse(path).anchors)
+
     def test_every_indexable_page_title_fits_search_results(self):
         for path in PUBLIC.rglob("index.html"):
             with self.subTest(path=path.relative_to(PUBLIC)):
