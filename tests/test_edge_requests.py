@@ -103,6 +103,38 @@ class AcquisitionSummaryTests(unittest.TestCase):
         self.assertIn("     2  googlebot  /story/", report)
         self.assertNotIn("5  googlebot  /robots.txt", report)
 
+    def test_search_crawler_coverage_reports_observed_and_missing_paths(self):
+        groups = [
+            group(2, "/", user_agent="Googlebot/2.1"),
+            group(1, "/journal/", user_agent="Googlebot/2.1"),
+            group(3, "/story/", user_agent="bingbot/2.0"),
+            group(4, "/robots.txt", user_agent="Googlebot/2.1"),
+            group(5, "/journal/coffee-bean-types/", user_agent="ClaudeBot/1.0"),
+            group(6, "/contact/", status=404, user_agent="Googlebot/2.1"),
+            group(7, "/better-coffee-at-home/", method="POST", user_agent="bingbot/2.0"),
+        ]
+
+        report = edge_requests.format_search_crawler_coverage(groups)
+
+        self.assertIn("googlebot: 2/12 canonical paths observed", report)
+        self.assertIn("bingbot: 1/12 canonical paths observed", report)
+        self.assertIn("duckduckbot: 0/12 canonical paths observed", report)
+        self.assertIn("observed: /, /journal/", report)
+        self.assertIn("observed: /story/", report)
+        self.assertNotIn("/robots.txt", report)
+        self.assertNotIn("coffee-bean-types", report)
+        self.assertNotIn("/contact/", report)
+        self.assertNotIn("/better-coffee-at-home/", report)
+        self.assertIn("user-agent signatures are not verified crawler identities", report)
+
+    def test_edge_group_limit_fails_closed_before_reporting(self):
+        groups = [group(1, f"/probe-{index}") for index in range(edge_requests.GROUP_LIMIT)]
+
+        with self.assertRaises(SystemExit) as error:
+            edge_requests.guard_group_limit(groups, "2026-09-10T00:00:00Z", "2026-09-11T00:00:00Z")
+
+        self.assertIn("refusing to report potentially truncated edge data", str(error.exception))
+
     def test_query_requests_method_but_not_unavailable_referrer(self):
         self.assertIn("clientRequestHTTPMethodName", edge_requests.QUERY)
         self.assertNotIn("clientRefererHost", edge_requests.QUERY)

@@ -26,6 +26,7 @@ from datetime import datetime, timedelta, timezone
 
 ZONE = "df47a612388511375ea5fc45be07040d"  # mokhacaffe.com (verified 2026-08-31)
 GQL = "https://api.cloudflare.com/client/v4/graphql"
+GROUP_LIMIT = 500
 
 QUERY = """query($zone: String!, $since: Time!, $until: Time!) {
   viewer { zones(filter: {zoneTag: $zone}) {
@@ -43,6 +44,7 @@ QUERY = """query($zone: String!, $since: Time!, $until: Time!) {
 BOT_UAS = ("googlebot", "bingbot", "duckduckbot", "yandexbot", "baiduspider",
            "slurp", "applebot", "petalbot", "seznambot", "gptbot",
            "claudebot", "perplexitybot", "bytespider")
+SEARCH_CRAWLER_UAS = ("googlebot", "bingbot", "duckduckbot", "yandexbot")
 CANONICAL_CONTENT_PATHS = {
     "/", "/better-coffee-at-home/", "/coffee-ratio-calculator/",
     "/story/", "/journal/", "/contact/",
@@ -157,6 +159,45 @@ def format_acquisition(groups):
     return "\n".join(lines)
 
 
+def format_search_crawler_coverage(groups):
+    """Report canonical-path coverage for the main search crawler signatures."""
+    observed = {crawler: set() for crawler in SEARCH_CRAWLER_UAS}
+    for group in groups:
+        dimensions = group["dimensions"]
+        path = dimensions.get("clientRequestPath")
+        if (
+            path not in CANONICAL_CONTENT_PATHS
+            or dimensions.get("edgeResponseStatus") != 200
+            or dimensions.get("clientRequestHTTPMethodName") not in ("GET", "HEAD")
+        ):
+            continue
+        ua = (dimensions.get("userAgent") or "").lower()
+        for crawler in SEARCH_CRAWLER_UAS:
+            if crawler in ua:
+                observed[crawler].add(path)
+                break
+
+    total = len(CANONICAL_CONTENT_PATHS)
+    lines = ["## search crawler canonical-path coverage"]
+    for crawler in SEARCH_CRAWLER_UAS:
+        paths = sorted(observed[crawler])
+        lines.append(f"{crawler}: {len(paths)}/{total} canonical paths observed")
+        lines.append("  observed: " + (", ".join(paths) if paths else "none"))
+    lines.append(
+        "note: user-agent signatures are not verified crawler identities; coverage means observed edge requests, not indexing."
+    )
+    return "\n".join(lines)
+
+
+def guard_group_limit(groups, since, until):
+    """Stop when the GraphQL group cap may have omitted low-volume rows."""
+    if len(groups) >= GROUP_LIMIT:
+        sys.exit(
+            f"edge query returned {len(groups)} rows for {since} to {until} "
+            f"(limit {GROUP_LIMIT}); refusing to report potentially truncated edge data"
+        )
+
+
 def run(token, since, until):
     body = json.dumps({"query": QUERY,
                        "variables": {"zone": ZONE, "since": since,
@@ -167,7 +208,9 @@ def run(token, since, until):
         resp = json.load(r)
     if resp.get("errors"):
         sys.exit(f"GraphQL errors: {resp['errors']}")
-    return (resp["data"]["viewer"]["zones"][0]["httpRequestsAdaptiveGroups"])
+    groups = resp["data"]["viewer"]["zones"][0]["httpRequestsAdaptiveGroups"]
+    guard_group_limit(groups, since, until)
+    return groups
 
 
 def main():
@@ -215,6 +258,7 @@ def main():
         print(f"{c:>6}  HTTP {s}")
 
     print("\n" + format_acquisition(groups))
+    print("\n" + format_search_crawler_coverage(groups))
 
     print("\n## search/AI crawler user-agents (indexing pipeline signal)")
     bot_total = 0
