@@ -88,6 +88,21 @@ class AcquisitionSummaryTests(unittest.TestCase):
         self.assertIn("not verified human visits", report)
         self.assertEqual(sum(edge_requests.canonical_content_request_split(groups)), 7)
 
+    def test_acquisition_report_breaks_known_crawlers_down_by_canonical_path(self):
+        groups = [
+            group(2, "/story/", user_agent="Googlebot/2.1"),
+            group(3, "/journal/coffee-bean-types/", user_agent="bingbot/2.0"),
+            group(4, "/journal/coffee-bean-types/", user_agent="Mozilla/5.0"),
+            group(5, "/robots.txt", user_agent="Googlebot/2.1"),
+        ]
+
+        report = edge_requests.format_acquisition(groups)
+
+        self.assertIn("known crawler signatures by canonical path:", report)
+        self.assertIn("     3  bingbot  /journal/coffee-bean-types/", report)
+        self.assertIn("     2  googlebot  /story/", report)
+        self.assertNotIn("5  googlebot  /robots.txt", report)
+
     def test_query_requests_method_but_not_unavailable_referrer(self):
         self.assertIn("clientRequestHTTPMethodName", edge_requests.QUERY)
         self.assertNotIn("clientRefererHost", edge_requests.QUERY)

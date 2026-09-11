@@ -111,10 +111,30 @@ def canonical_content_request_split(groups):
     return crawler, other
 
 
+def canonical_crawler_requests_by_path(groups):
+    """Aggregate known crawler signatures on successful canonical requests."""
+    requests = {}
+    for group in groups:
+        dimensions = group["dimensions"]
+        path = dimensions.get("clientRequestPath")
+        ua = (dimensions.get("userAgent") or "").lower()
+        crawler_name = next((bot for bot in BOT_UAS if bot in ua), None)
+        if (
+            path in CANONICAL_CONTENT_PATHS
+            and dimensions.get("edgeResponseStatus") == 200
+            and dimensions.get("clientRequestHTTPMethodName") in ("GET", "HEAD")
+            and crawler_name
+        ):
+            key = (crawler_name, path)
+            requests[key] = requests.get(key, 0) + group["count"]
+    return requests
+
+
 def format_acquisition(groups):
     """Format successful canonical-content request counts."""
     content = canonical_content_requests(groups)
     crawler, other = canonical_content_request_split(groups)
+    crawler_paths = canonical_crawler_requests_by_path(groups)
     lines = [
         "## canonical content requests",
         f"canonical content requests: {sum(content.values())}",
@@ -123,6 +143,14 @@ def format_acquisition(groups):
     ]
     for path, count in sorted(content.items(), key=lambda item: (-item[1], item[0])):
         lines.append(f"{count:>6}  {path}")
+    if crawler_paths:
+        lines.append("known crawler signatures by canonical path:")
+        for (crawler_name, path), count in sorted(
+            crawler_paths.items(), key=lambda item: (-item[1], item[0])
+        ):
+            lines.append(f"{count:>6}  {crawler_name}  {path}")
+    else:
+        lines.append("known crawler signatures by canonical path: none observed")
     lines.append(
         "note: other requests are not verified human visits; self traffic and unidentified bots may remain."
     )

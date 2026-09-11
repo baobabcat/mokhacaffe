@@ -25,7 +25,8 @@ Cloudflare Workers Static Assets, served by a tiny Worker that 301s www → apex
 - `tools/edge_requests.py` — server-side edge-request baseline via GraphQL
   (successful canonical-page requests plus crawler visibility the RUM beacon
   cannot see; canonical requests are split between known crawler signatures and
-  all other user agents without treating the latter as verified human visits;
+  all other user agents, with crawler names and canonical paths reported
+  together, without treating the remainder as verified human visits;
   Free-plan windows are capped at one day, then sliced and merged)
 - `tools/indexnow_ping.py` — submits sitemap URLs to IndexNow (Bing/Yandex)
 - `tools/bing_webmaster.py` — Bing Webmaster API client (URL submission via
