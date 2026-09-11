@@ -189,6 +189,43 @@ def format_search_crawler_coverage(groups):
     return "\n".join(lines)
 
 
+def format_search_crawler_discovery_activity(groups):
+    """Report successful discovery and content requests by search crawler."""
+    activity = {
+        crawler: {"/robots.txt": 0, "/sitemap.xml": 0, "/feed.xml": 0, "canonical": 0}
+        for crawler in SEARCH_CRAWLER_UAS
+    }
+    for group in groups:
+        dimensions = group["dimensions"]
+        if (
+            dimensions.get("edgeResponseStatus") != 200
+            or dimensions.get("clientRequestHTTPMethodName") not in ("GET", "HEAD")
+        ):
+            continue
+        ua = (dimensions.get("userAgent") or "").lower()
+        crawler = next((name for name in SEARCH_CRAWLER_UAS if name in ua), None)
+        if not crawler:
+            continue
+        path = dimensions.get("clientRequestPath")
+        if path in ("/robots.txt", "/sitemap.xml", "/feed.xml"):
+            activity[crawler][path] += group["count"]
+        elif path in CANONICAL_CONTENT_PATHS:
+            activity[crawler]["canonical"] += group["count"]
+
+    lines = ["## search crawler discovery-path activity"]
+    for crawler in SEARCH_CRAWLER_UAS:
+        counts = activity[crawler]
+        lines.append(
+            f"{crawler}: robots.txt {counts['/robots.txt']}, "
+            f"sitemap.xml {counts['/sitemap.xml']}, feed.xml {counts['/feed.xml']}, "
+            f"canonical content {counts['canonical']}"
+        )
+    lines.append(
+        "note: counts include only successful GET/HEAD requests; user-agent signatures are not verified crawler identities."
+    )
+    return "\n".join(lines)
+
+
 def guard_group_limit(groups, since, until):
     """Stop when the GraphQL group cap may have omitted low-volume rows."""
     if len(groups) >= GROUP_LIMIT:
@@ -259,6 +296,7 @@ def main():
 
     print("\n" + format_acquisition(groups))
     print("\n" + format_search_crawler_coverage(groups))
+    print("\n" + format_search_crawler_discovery_activity(groups))
 
     print("\n## search/AI crawler user-agents (indexing pipeline signal)")
     bot_total = 0

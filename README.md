@@ -25,7 +25,8 @@ Cloudflare Workers Static Assets, served by a tiny Worker that 301s www → apex
 - `tools/edge_requests.py` — server-side edge-request baseline via GraphQL
   (successful canonical-page requests plus crawler visibility the RUM beacon
   cannot see; canonical requests are split between known crawler signatures and
-  all other user agents; crawler names are reported by path and the main search
+  all other user agents; the report compares search-crawler requests for
+  robots.txt, sitemap.xml, feed.xml, and canonical content, and the main search
   crawlers show canonical-path coverage for the lookback window. User-agent
   signatures are not treated as verified identities, and the remainder is not
   treated as verified human visits; Free-plan windows are capped at one day,

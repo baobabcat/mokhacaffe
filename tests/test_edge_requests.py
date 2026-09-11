@@ -127,6 +127,29 @@ class AcquisitionSummaryTests(unittest.TestCase):
         self.assertNotIn("/better-coffee-at-home/", report)
         self.assertIn("user-agent signatures are not verified crawler identities", report)
 
+    def test_search_crawler_discovery_activity_reports_pipeline_paths(self):
+        groups = [
+            group(4, "/robots.txt", user_agent="Googlebot/2.1"),
+            group(3, "/sitemap.xml", user_agent="Googlebot/2.1"),
+            group(2, "/feed.xml", user_agent="Googlebot/2.1"),
+            group(5, "/journal/", user_agent="Googlebot/2.1"),
+            group(1, "/story/", method="HEAD", user_agent="Googlebot/2.1"),
+            group(6, "/robots.txt", user_agent="bingbot/2.0"),
+            group(7, "/sitemap.xml", status=404, user_agent="bingbot/2.0"),
+            group(8, "/feed.xml", method="POST", user_agent="bingbot/2.0"),
+            group(9, "/sitemap.xml", user_agent="ClaudeBot/1.0"),
+        ]
+
+        report = edge_requests.format_search_crawler_discovery_activity(groups)
+
+        self.assertIn("googlebot: robots.txt 4, sitemap.xml 3, feed.xml 2, canonical content 6", report)
+        self.assertIn("bingbot: robots.txt 6, sitemap.xml 0, feed.xml 0, canonical content 0", report)
+        self.assertIn("duckduckbot: robots.txt 0, sitemap.xml 0, feed.xml 0, canonical content 0", report)
+        self.assertIn("yandexbot: robots.txt 0, sitemap.xml 0, feed.xml 0, canonical content 0", report)
+        self.assertNotIn("ClaudeBot", report)
+        self.assertIn("successful GET/HEAD requests", report)
+        self.assertIn("user-agent signatures are not verified crawler identities", report)
+
     def test_edge_group_limit_fails_closed_before_reporting(self):
         groups = [group(1, f"/probe-{index}") for index in range(edge_requests.GROUP_LIMIT)]
 
