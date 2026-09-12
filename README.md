@@ -9,6 +9,9 @@ Cloudflare Workers Static Assets, served by a tiny Worker that 301s www → apex
 - `wrangler.jsonc` — name, routes (custom domains apex + www), assets binding
 - `tools/gen_og.py` — regenerates `public/assets/og.png` (pure stdlib)
 - `tools/seo_audit.py` — on-page/sitemap/feed/link audit of the live site
+- `tools/check_sources.py` — read-only check of external links on Article pages;
+  confirmed 404/410 responses fail, access blocks and temporary errors warn, and
+  Article pages without an external source link are listed for editorial review
 - `/coffee-ratio-calculator/` — browser-only coffee-to-water calculator linked
   from the Better Coffee at Home guide. It sends a `ratio_calculation` GA4 event
   on form submission with only the calculation direction, never entered amounts.
