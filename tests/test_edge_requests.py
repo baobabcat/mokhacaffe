@@ -1,5 +1,6 @@
 import importlib.util
 from pathlib import Path
+import tempfile
 import unittest
 
 
@@ -24,6 +25,48 @@ def group(count, path, status=200, method="GET", referrer="", user_agent="test-a
 
 
 class AcquisitionSummaryTests(unittest.TestCase):
+    def test_canonical_paths_are_derived_from_sitemap(self):
+        sitemap = """<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">
+  <url><loc>https://mokhacaffe.com/</loc></url>
+  <url><loc>https://mokhacaffe.com/new-guide/</loc></url>
+</urlset>
+"""
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "sitemap.xml"
+            path.write_text(sitemap, encoding="utf-8")
+
+            self.assertEqual(
+                edge_requests.sitemap_canonical_paths(path),
+                {"/", "/new-guide/"},
+            )
+
+    def test_canonical_paths_reject_an_unexpected_origin(self):
+        sitemap = """<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">
+  <url><loc>https://other.example/</loc></url>
+</urlset>
+"""
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "sitemap.xml"
+            path.write_text(sitemap, encoding="utf-8")
+
+            with self.assertRaisesRegex(ValueError, "unexpected sitemap origin"):
+                edge_requests.sitemap_canonical_paths(path)
+
+    def test_canonical_paths_reject_a_sitemap_index(self):
+        sitemap = """<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+<sitemapindex xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">
+  <sitemap><loc>https://mokhacaffe.com/section-sitemap.xml</loc></sitemap>
+</sitemapindex>
+"""
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "sitemap.xml"
+            path.write_text(sitemap, encoding="utf-8")
+
+            with self.assertRaisesRegex(ValueError, "expected a sitemap urlset"):
+                edge_requests.sitemap_canonical_paths(path)
+
     def test_merge_groups_preserves_request_method(self):
         rows = [
             group(2, "/"),
@@ -118,9 +161,10 @@ class AcquisitionSummaryTests(unittest.TestCase):
 
         report = edge_requests.format_search_crawler_coverage(groups)
 
-        self.assertIn("googlebot: 2/13 canonical paths observed", report)
-        self.assertIn("bingbot: 1/13 canonical paths observed", report)
-        self.assertIn("duckduckbot: 0/13 canonical paths observed", report)
+        expected_total = len(edge_requests.CANONICAL_CONTENT_PATHS)
+        self.assertIn(f"googlebot: 2/{expected_total} canonical paths observed", report)
+        self.assertIn(f"bingbot: 1/{expected_total} canonical paths observed", report)
+        self.assertIn(f"duckduckbot: 0/{expected_total} canonical paths observed", report)
         self.assertIn("observed: /, /journal/", report)
         self.assertIn("observed: /story/", report)
         self.assertNotIn("/robots.txt", report)

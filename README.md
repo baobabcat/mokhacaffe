@@ -24,8 +24,9 @@ Cloudflare Workers Static Assets, served by a tiny Worker that 301s www → apex
   message or a qualified lead.
 - `tools/edge_requests.py` — server-side edge-request baseline via GraphQL
   (successful canonical-page requests plus crawler visibility the RUM beacon
-  cannot see; canonical requests are split between known crawler signatures and
-  all other user agents; the report compares search-crawler requests for
+  cannot see; the canonical route set is loaded from the deployable sitemap so new
+  pages enter reports automatically. Canonical requests are split between known
+  crawler signatures and all other user agents; the report compares search-crawler
   robots.txt, sitemap.xml, feed.xml, and canonical content, and the main search
   crawlers show canonical-path coverage for the lookback window. It also splits
   successful feed requests among named feed-reader signatures, site checks,

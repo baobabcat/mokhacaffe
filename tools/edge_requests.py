@@ -20,8 +20,11 @@ Usage: python3 tools/edge_requests.py [--hours 168]
 import argparse
 import json
 import os
+from pathlib import Path
 import sys
+import urllib.parse
 import urllib.request
+import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta, timezone
 
 ZONE = "df47a612388511375ea5fc45be07040d"  # mokhacaffe.com (verified 2026-08-31)
@@ -50,17 +53,30 @@ FEED_READER_UAS = (
     "newsblur", "the old reader",
 )
 SITE_CHECK_UAS = ("mokha-seo-audit", "mokhaverification", "mokhareleaseverifier")
-CANONICAL_CONTENT_PATHS = {
-    "/", "/better-coffee-at-home/", "/coffee-ratio-calculator/",
-    "/story/", "/journal/", "/contact/",
-    "/journal/what-mocha-really-means/",
-    "/journal/moka-pot-properly/",
-    "/journal/yemeni-coffee-today/",
-    "/journal/qishr-yemeni-ginger-coffee/",
-    "/journal/how-to-read-a-coffee-bag/",
-    "/journal/coffee-bean-types/",
-    "/coffee-grind-size-chart/",
-}
+ROOT = Path(__file__).resolve().parent.parent
+SITEMAP = ROOT / "public" / "sitemap.xml"
+
+
+def sitemap_canonical_paths(path=SITEMAP):
+    """Return same-origin canonical paths from the deployable sitemap."""
+    tree = ET.parse(path)
+    namespace = {"s": "http://www.sitemaps.org/schemas/sitemap/0.9"}
+    if tree.getroot().tag != f"{{{namespace['s']}}}urlset":
+        raise ValueError("expected a sitemap urlset")
+    paths = set()
+    for loc in tree.findall(".//s:loc", namespace):
+        if not loc.text:
+            continue
+        url = urllib.parse.urlsplit(loc.text.strip())
+        if url.scheme != "https" or url.netloc != "mokhacaffe.com":
+            raise ValueError(f"unexpected sitemap origin: {loc.text.strip()}")
+        paths.add(url.path or "/")
+    if not paths:
+        raise ValueError("sitemap contains no canonical URLs")
+    return paths
+
+
+CANONICAL_CONTENT_PATHS = sitemap_canonical_paths()
 
 
 def merge_group_rows(rows):
