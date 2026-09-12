@@ -45,6 +45,11 @@ BOT_UAS = ("googlebot", "bingbot", "duckduckbot", "yandexbot", "baiduspider",
            "slurp", "applebot", "petalbot", "seznambot", "gptbot",
            "claudebot", "perplexitybot", "bytespider")
 SEARCH_CRAWLER_UAS = ("googlebot", "bingbot", "duckduckbot", "yandexbot")
+FEED_READER_UAS = (
+    "feedbin", "feedly", "freshrss", "inoreader", "miniflux", "netnewswire",
+    "newsblur", "the old reader",
+)
+SITE_CHECK_UAS = ("mokha-seo-audit", "mokhaverification", "mokhareleaseverifier")
 CANONICAL_CONTENT_PATHS = {
     "/", "/better-coffee-at-home/", "/coffee-ratio-calculator/",
     "/story/", "/journal/", "/contact/",
@@ -227,6 +232,47 @@ def format_search_crawler_discovery_activity(groups):
     return "\n".join(lines)
 
 
+def format_feed_activity(groups):
+    """Classify successful feed requests by broad user-agent signature."""
+    counts = {
+        "named feed-reader signatures": 0,
+        "site checks": 0,
+        "known crawler signatures": 0,
+        "browser signatures": 0,
+        "other or unidentified clients": 0,
+    }
+    for group in groups:
+        dimensions = group["dimensions"]
+        if (
+            dimensions.get("clientRequestPath") != "/feed.xml"
+            or dimensions.get("edgeResponseStatus") != 200
+            or dimensions.get("clientRequestHTTPMethodName") not in ("GET", "HEAD")
+        ):
+            continue
+        ua = (dimensions.get("userAgent") or "").lower()
+        if any(signature in ua for signature in SITE_CHECK_UAS):
+            category = "site checks"
+        elif any(signature in ua for signature in BOT_UAS):
+            category = "known crawler signatures"
+        elif any(signature in ua for signature in FEED_READER_UAS):
+            category = "named feed-reader signatures"
+        elif "mozilla/" in ua:
+            category = "browser signatures"
+        else:
+            category = "other or unidentified clients"
+        counts[category] += group["count"]
+
+    lines = [
+        "## feed request activity",
+        f"successful feed requests: {sum(counts.values())}",
+    ]
+    lines.extend(f"{label}: {count}" for label, count in counts.items())
+    lines.append(
+        "note: user-agent signatures can be spoofed and requests do not prove a subscription or distinct reader."
+    )
+    return "\n".join(lines)
+
+
 def guard_group_limit(groups, since, until):
     """Stop when the GraphQL group cap may have omitted low-volume rows."""
     if len(groups) >= GROUP_LIMIT:
@@ -298,6 +344,7 @@ def main():
     print("\n" + format_acquisition(groups))
     print("\n" + format_search_crawler_coverage(groups))
     print("\n" + format_search_crawler_discovery_activity(groups))
+    print("\n" + format_feed_activity(groups))
 
     print("\n## search/AI crawler user-agents (indexing pipeline signal)")
     bot_total = 0

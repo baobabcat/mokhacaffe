@@ -152,6 +152,29 @@ class AcquisitionSummaryTests(unittest.TestCase):
         self.assertIn("successful GET/HEAD requests", report)
         self.assertIn("user-agent signatures are not verified crawler identities", report)
 
+    def test_feed_activity_separates_reader_signatures_from_checks_and_crawlers(self):
+        groups = [
+            group(4, "/feed.xml", user_agent="Feedly/1.0"),
+            group(2, "/feed.xml", method="HEAD", user_agent="Miniflux/2.2"),
+            group(3, "/feed.xml", user_agent="Mozilla/5.0"),
+            group(5, "/feed.xml", user_agent="Googlebot/2.1"),
+            group(6, "/feed.xml", user_agent="curl/8.5.0"),
+            group(7, "/feed.xml", user_agent="mokha-seo-audit/1.0"),
+            group(8, "/feed.xml", status=404, user_agent="Feedly/1.0"),
+            group(9, "/feed.xml", method="POST", user_agent="Feedly/1.0"),
+            group(10, "/journal/", user_agent="Feedly/1.0"),
+        ]
+
+        report = edge_requests.format_feed_activity(groups)
+
+        self.assertIn("successful feed requests: 27", report)
+        self.assertIn("named feed-reader signatures: 6", report)
+        self.assertIn("site checks: 7", report)
+        self.assertIn("known crawler signatures: 5", report)
+        self.assertIn("browser signatures: 3", report)
+        self.assertIn("other or unidentified clients: 6", report)
+        self.assertIn("do not prove a subscription or distinct reader", report)
+
     def test_edge_group_limit_fails_closed_before_reporting(self):
         groups = [group(1, f"/probe-{index}") for index in range(edge_requests.GROUP_LIMIT)]
 

@@ -27,10 +27,12 @@ Cloudflare Workers Static Assets, served by a tiny Worker that 301s www → apex
   cannot see; canonical requests are split between known crawler signatures and
   all other user agents; the report compares search-crawler requests for
   robots.txt, sitemap.xml, feed.xml, and canonical content, and the main search
-  crawlers show canonical-path coverage for the lookback window. User-agent
-  signatures are not treated as verified identities, and the remainder is not
-  treated as verified human visits; Free-plan windows are capped at one day,
-  then sliced and merged)
+  crawlers show canonical-path coverage for the lookback window. It also splits
+  successful feed requests among named feed-reader signatures, site checks,
+  crawlers, browsers, and unidentified clients. User-agent signatures are not
+  treated as verified identities, and requests are not treated as subscriptions
+  or distinct readers; Free-plan windows are capped at one day, then sliced and
+  merged)
 - `tools/indexnow_ping.py` — submits sitemap URLs to IndexNow (Bing/Yandex)
 - `tools/bing_webmaster.py` — Bing Webmaster API client (URL submission via
   SubmitUrlBatch + verifiable index/crawl/query stats). Reads the configured
