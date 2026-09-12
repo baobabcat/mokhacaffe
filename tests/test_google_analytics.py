@@ -2,6 +2,7 @@ import base64
 import hashlib
 from html.parser import HTMLParser
 from pathlib import Path
+import subprocess
 import unittest
 
 
@@ -90,6 +91,41 @@ class GoogleAnalyticsTests(unittest.TestCase):
         self.assertIn("window.gtag('event', eventName", script)
         self.assertIn("contact_method: 'email'", script)
         self.assertIn("inquiry_type: link.dataset.inquiryType", script)
+
+    def test_visible_feed_links_record_feed_open(self):
+        indexable_pages = [
+            path
+            for path in sorted(PUBLIC.rglob("index.html"))
+            if path != PUBLIC / "404.html"
+        ]
+        self.assertEqual(13, len(indexable_pages))
+
+        expected_link = (
+            '<a href="/feed.xml" type="application/atom+xml" '
+            'data-analytics-event="feed_open">Feed</a>'
+        )
+        for path in indexable_pages:
+            html = path.read_text()
+            self.assertIn(expected_link, html, path)
+            self.assertIn(
+                '<script defer src="/assets/analytics-events.js"></script>',
+                html,
+                path,
+            )
+
+        script = (PUBLIC / "assets" / "analytics-events.js").read_text()
+        self.assertIn("if (eventName === 'feed_open')", script)
+        self.assertIn("event_callback: followFeed", script)
+        self.assertIn("transport_type: 'beacon'", script)
+
+        result = subprocess.run(
+            ["node", str(ROOT / "tests" / "feed-analytics.test.mjs")],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertIn("analytics behavior passed", result.stdout)
 
 
 if __name__ == "__main__":
