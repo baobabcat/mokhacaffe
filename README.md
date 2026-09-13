@@ -41,9 +41,10 @@ Cloudflare Workers Static Assets, served by a tiny Worker that 301s www → apex
 - `tools/bing_webmaster.py` — Bing Webmaster API client (URL submission via
   SubmitUrlBatch + verifiable index/crawl/query stats). Reads the configured
   `BING_WEBMASTER_API_KEY` environment variable; the key is never committed.
-- `tools/gen_feed.py` — regenerates `public/feed.xml` (Atom) from the journal index;
-  the feed is linked in every page footer so readers can follow new guides without
-  giving Mokha an email address. Opening a visible Feed link records a `feed_open`
+- `tools/gen_feed.py` — regenerates `public/feed.xml` (Atom) from the journal index
+  and each article's JSON-LD publication and modification dates; the feed is linked
+  in every page footer so readers can follow new or revised guides without giving
+  Mokha an email address. Opening a visible Feed link records a `feed_open`
   GA4 event with no custom event details, entered values, or message content.
 
 ## Deploy

@@ -2,13 +2,14 @@
 """Generate public/feed.xml (Atom 1.0) for the Mokha Caffè journal.
 
 Source of truth: public/journal/index.html <ul class="post-list"> entries
-(date · category, title link, summary). Pure stdlib, deterministic output
-(no build timestamps — feed <updated> comes from entry dates only), so the
-file only changes when journal content changes.
+(date · category, title link, summary) plus each article's JSON-LD publication
+and modification dates. Pure stdlib and deterministic, so the file only changes
+when journal content or article metadata changes.
 
 Usage: python3 tools/gen_feed.py          # writes public/feed.xml
        python3 tools/gen_feed.py --check  # verify existing feed is in sync
 """
+import json
 import re
 import sys
 import xml.etree.ElementTree as ET
@@ -80,8 +81,23 @@ def load_posts():
             raise SystemExit(f"unparseable post date: {raw['meta']!r}")
         if not (raw["href"] and raw["title"].strip()):
             raise SystemExit(f"post missing href/title: {raw!r}")
+        article_path = ROOT / "public" / raw["href"].lstrip("/") / "index.html"
+        article_html = article_path.read_text(encoding="utf-8")
+        updated = date
+        for block in re.findall(
+            r'<script\s+type="application/ld\+json">(.*?)</script>',
+            article_html,
+            flags=re.DOTALL,
+        ):
+            data = json.loads(block)
+            if data.get("@type") == "Article":
+                updated = data.get("dateModified", data.get("datePublished", date))
+                break
+        if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", updated):
+            raise SystemExit(f"unparseable article update date: {updated!r}")
         posts.append({
             "date": date,
+            "updated": updated,
             "title": " ".join(raw["title"].split()),
             "url": SITE + raw["href"],
             "summary": " ".join(raw["summary"].split()),
@@ -98,7 +114,8 @@ def build_feed(posts):
     ET.SubElement(feed, f"{{{ATOM}}}title").text = FEED_TITLE
     ET.SubElement(feed, f"{{{ATOM}}}subtitle").text = FEED_SUBTITLE
     ET.SubElement(feed, f"{{{ATOM}}}id").text = FEED_ID
-    ET.SubElement(feed, f"{{{ATOM}}}updated").text = f"{posts[0]['date']}T00:00:00Z"
+    feed_updated = max(post["updated"] for post in posts)
+    ET.SubElement(feed, f"{{{ATOM}}}updated").text = f"{feed_updated}T00:00:00Z"
     ET.SubElement(feed, f"{{{ATOM}}}link", rel="alternate",
                   type="text/html", href=FEED_ID)
     ET.SubElement(feed, f"{{{ATOM}}}link", rel="self",
@@ -113,7 +130,7 @@ def build_feed(posts):
                       type="text/html", href=post["url"])
         ET.SubElement(e, f"{{{ATOM}}}id").text = post["url"]
         ET.SubElement(e, f"{{{ATOM}}}published").text = f"{post['date']}T00:00:00Z"
-        ET.SubElement(e, f"{{{ATOM}}}updated").text = f"{post['date']}T00:00:00Z"
+        ET.SubElement(e, f"{{{ATOM}}}updated").text = f"{post['updated']}T00:00:00Z"
         ET.SubElement(e, f"{{{ATOM}}}summary", type="text").text = post["summary"]
     xml = ET.tostring(feed, encoding="unicode")
     return '<?xml version="1.0" encoding="utf-8"?>\n' + xml + "\n"
@@ -136,8 +153,9 @@ def main():
     for e in entries:
         for req in ("title", "id", "updated", "link"):
             assert e.find(f"{{{ATOM}}}{req}") is not None, f"entry missing {req}"
+    feed_updated = max(post["updated"] for post in posts)
     print(f"wrote {OUT.relative_to(ROOT)} ({len(entries)} entries, "
-          f"updated {posts[0]['date']})")
+          f"updated {feed_updated})")
 
 
 if __name__ == "__main__":

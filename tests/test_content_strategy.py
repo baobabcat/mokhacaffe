@@ -160,6 +160,72 @@ class ContentStrategyTests(unittest.TestCase):
             article_data["dateModified"],
         )
 
+    def test_yemeni_coffee_article_links_current_sources_and_results(self):
+        article_path = PUBLIC / "journal" / "yemeni-coffee-today" / "index.html"
+        article = parse(article_path)
+        for source in (
+            "https://en.wikipedia.org/w/index.php?title=Arabic_coffee&oldid=1374474912",
+            "https://en.wikipedia.org/w/index.php?title=Mokha&oldid=1374419597",
+            "https://en.wikipedia.org/w/index.php?title=Economy_of_Yemen&oldid=1373247583",
+            "https://www.qimacoffee.com/yemenia",
+            "https://www.qimacoffee.com/yemen",
+            "https://allianceforcoffeeexcellence.org/best-of-yemen-2026/",
+        ):
+            with self.subTest(source=source):
+                self.assertIn(source, article.anchors)
+
+        html = article_path.read_text()
+        self.assertNotIn("2026 edition upcoming", html)
+        article_data = next(
+            json.loads(block)
+            for block in article.jsonld
+            if json.loads(block).get("@type") == "Article"
+        )
+        self.assertEqual(article_data.get("datePublished"), "2026-08-26")
+        self.assertEqual(article_data.get("dateModified"), "2026-09-13")
+        self.assertIn("Updated 2026-09-13", html)
+
+        sitemap = ET.parse(PUBLIC / "sitemap.xml")
+        namespace = {"s": "http://www.sitemaps.org/schemas/sitemap/0.9"}
+        lastmods = {
+            node.findtext("s:loc", namespaces=namespace): node.findtext(
+                "s:lastmod", namespaces=namespace
+            )
+            for node in sitemap.findall("s:url", namespace)
+        }
+        self.assertEqual(
+            lastmods["https://mokhacaffe.com/journal/yemeni-coffee-today/"],
+            article_data["dateModified"],
+        )
+
+        stale_summary = "a war that won't stop the harvest"
+        journal_html = (PUBLIC / "journal" / "index.html").read_text()
+        self.assertNotIn(stale_summary, journal_html)
+
+        atom = {"a": "http://www.w3.org/2005/Atom"}
+        feed = ET.parse(PUBLIC / "feed.xml")
+        entries = {
+            entry.findtext("a:id", namespaces=atom): entry
+            for entry in feed.findall("a:entry", atom)
+        }
+        entry = entries["https://mokhacaffe.com/journal/yemeni-coffee-today/"]
+        self.assertNotIn(
+            stale_summary,
+            entry.findtext("a:summary", namespaces=atom) or "",
+        )
+        self.assertEqual(
+            entry.findtext("a:updated", namespaces=atom),
+            "2026-09-13T00:00:00Z",
+        )
+        self.assertEqual(
+            feed.getroot().findtext("a:updated", namespaces=atom),
+            "2026-09-13T00:00:00Z",
+        )
+
+        for mark in ("—", "–", "“", "”"):
+            with self.subTest(mark=mark):
+                self.assertNotIn(mark, html)
+
     def test_story_headline_matches_emerging_search_intent(self):
         story = parse(PUBLIC / "story" / "index.html")
         headline = story.h1_text.lower()
