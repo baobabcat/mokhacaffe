@@ -117,6 +117,17 @@ class ContentStrategyTests(unittest.TestCase):
         urls = [node.text for node in sitemap.findall("s:url/s:loc", namespace)]
         self.assertIn("https://mokhacaffe.com" + guide_path, urls)
 
+    def test_qishr_article_links_to_its_named_sources(self):
+        article = parse(
+            PUBLIC / "journal" / "qishr-yemeni-ginger-coffee" / "index.html"
+        )
+        for source in (
+            "https://en.wikipedia.org/wiki/Qishr",
+            "https://en.wikipedia.org/wiki/Coffee_cherry_tea",
+        ):
+            with self.subTest(source=source):
+                self.assertIn(source, article.anchors)
+
     def test_story_headline_matches_emerging_search_intent(self):
         story = parse(PUBLIC / "story" / "index.html")
         headline = story.h1_text.lower()
