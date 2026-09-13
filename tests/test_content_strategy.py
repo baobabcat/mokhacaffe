@@ -128,6 +128,38 @@ class ContentStrategyTests(unittest.TestCase):
             with self.subTest(source=source):
                 self.assertIn(source, article.anchors)
 
+    def test_moka_pot_article_links_to_bialetti_guidance(self):
+        article_path = PUBLIC / "journal" / "moka-pot-properly" / "index.html"
+        article = parse(article_path)
+        for source in (
+            "https://www.bialetti.com/it_en/moka-express.html",
+            "https://www.bialetti.com/it_en/inspiration/post/ground-coffee-for-moka-should-never-be-pressed",
+        ):
+            with self.subTest(source=source):
+                self.assertIn(source, article.anchors)
+
+        article_data = next(
+            json.loads(block)
+            for block in article.jsonld
+            if json.loads(block).get("@type") == "Article"
+        )
+        self.assertEqual(article_data.get("datePublished"), "2026-08-25")
+        self.assertEqual(article_data.get("dateModified"), "2026-09-13")
+        self.assertIn("Updated 2026-09-13", article_path.read_text())
+
+        sitemap = ET.parse(PUBLIC / "sitemap.xml")
+        namespace = {"s": "http://www.sitemaps.org/schemas/sitemap/0.9"}
+        lastmods = {
+            node.findtext("s:loc", namespaces=namespace): node.findtext(
+                "s:lastmod", namespaces=namespace
+            )
+            for node in sitemap.findall("s:url", namespace)
+        }
+        self.assertEqual(
+            lastmods["https://mokhacaffe.com/journal/moka-pot-properly/"],
+            article_data["dateModified"],
+        )
+
     def test_story_headline_matches_emerging_search_intent(self):
         story = parse(PUBLIC / "story" / "index.html")
         headline = story.h1_text.lower()
