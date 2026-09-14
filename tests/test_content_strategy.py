@@ -128,6 +128,55 @@ class ContentStrategyTests(unittest.TestCase):
             with self.subTest(source=source):
                 self.assertIn(source, article.anchors)
 
+    def test_better_coffee_pages_use_consistent_sourced_moka_grind_guidance(self):
+        hub = parse(HUB_FILE)
+        chart_path = PUBLIC / "coffee-grind-size-chart" / "index.html"
+        chart = parse(chart_path)
+        bialetti_source = "https://www.bialetti.com/it_en/moka-express.html"
+        self.assertIn(bialetti_source, hub.anchors)
+        self.assertIn(bialetti_source, chart.anchors)
+
+        hub_html = HUB_FILE.read_text()
+        chart_html = chart_path.read_text()
+        for html in (hub_html, chart_html):
+            self.assertIn("Medium to coarse", html)
+            self.assertNotIn("Medium-fine, a little coarser than espresso", html)
+            self.assertNotIn("Start medium-fine", html)
+
+        hub_data = next(
+            json.loads(block)
+            for block in hub.jsonld
+            if json.loads(block).get("@type") == "Article"
+        )
+        chart_data = next(
+            json.loads(block)
+            for block in chart.jsonld
+            if json.loads(block).get("@type") == "Article"
+        )
+        self.assertEqual(hub_data.get("datePublished"), "2026-09-03")
+        self.assertEqual(hub_data.get("dateModified"), "2026-09-13")
+        self.assertEqual(chart_data.get("datePublished"), "2026-09-11")
+        self.assertEqual(chart_data.get("dateModified"), "2026-09-13")
+        self.assertIn("Updated 2026-09-13", hub_html)
+        self.assertIn("Updated 2026-09-13", chart_html)
+
+        sitemap = ET.parse(PUBLIC / "sitemap.xml")
+        namespace = {"s": "http://www.sitemaps.org/schemas/sitemap/0.9"}
+        lastmods = {
+            node.findtext("s:loc", namespaces=namespace): node.findtext(
+                "s:lastmod", namespaces=namespace
+            )
+            for node in sitemap.findall("s:url", namespace)
+        }
+        self.assertEqual(
+            lastmods["https://mokhacaffe.com/better-coffee-at-home/"],
+            hub_data["dateModified"],
+        )
+        self.assertEqual(
+            lastmods["https://mokhacaffe.com/coffee-grind-size-chart/"],
+            chart_data["dateModified"],
+        )
+
     def test_moka_pot_article_links_to_bialetti_guidance(self):
         article_path = PUBLIC / "journal" / "moka-pot-properly" / "index.html"
         article = parse(article_path)
