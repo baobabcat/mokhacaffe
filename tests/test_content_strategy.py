@@ -314,6 +314,68 @@ class ContentStrategyTests(unittest.TestCase):
             with self.subTest(mark=mark):
                 self.assertNotIn(mark, html)
 
+    def test_story_uses_pinned_sources_and_current_metadata(self):
+        story_path = PUBLIC / "story" / "index.html"
+        story = parse(story_path)
+        for source in (
+            "https://en.wikipedia.org/w/index.php?title=Mokha&oldid=1374759271",
+            "https://en.wikipedia.org/w/index.php?title=History_of_coffee&oldid=1373910413",
+            "https://en.wikipedia.org/w/index.php?title=Caff%C3%A8_mocha&oldid=1347818972",
+        ):
+            with self.subTest(source=source):
+                self.assertIn(source, story.anchors)
+
+        html = story_path.read_text()
+        article_data = next(
+            json.loads(block)
+            for block in story.jsonld
+            if json.loads(block).get("@type") == "Article"
+        )
+        self.assertEqual(article_data.get("datePublished"), "2026-08-25")
+        self.assertEqual(article_data.get("dateModified"), "2026-09-14")
+        self.assertIn("Updated 2026-09-14", html)
+
+        unsupported = (
+            "nearly every bean",
+            "nearly all the coffee",
+            "beans for export were boiled",
+            "wine-and-cocoa-toned cup",
+            "first great coffee port",
+            "port that shipped coffee to the world",
+            "coffee's first port",
+            "coffee’s first port",
+            "port that taught the world to drink coffee",
+            "shipped coffee to the world for three centuries",
+            "gave coffee its name",
+            "port that named coffee",
+        )
+        homepage = (PUBLIC / "index.html").read_text()
+        for claim in unsupported:
+            with self.subTest(claim=claim):
+                self.assertNotIn(claim, html)
+                self.assertNotIn(claim, homepage)
+
+        sitemap = ET.parse(PUBLIC / "sitemap.xml")
+        namespace = {"s": "http://www.sitemaps.org/schemas/sitemap/0.9"}
+        lastmods = {
+            node.findtext("s:loc", namespaces=namespace): node.findtext(
+                "s:lastmod", namespaces=namespace
+            )
+            for node in sitemap.findall("s:url", namespace)
+        }
+        self.assertEqual(lastmods["https://mokhacaffe.com/story/"], article_data["dateModified"])
+        self.assertEqual(lastmods["https://mokhacaffe.com/"], "2026-09-14")
+
+        for path in PUBLIC.rglob("*.html"):
+            with self.subTest(path=path.relative_to(PUBLIC)):
+                page_html = path.read_text()
+                self.assertNotIn("port that shipped coffee to the world", page_html)
+                self.assertNotIn("port that taught the world to drink coffee", page_html)
+
+        for mark in ("—", "–", "“", "”"):
+            with self.subTest(mark=mark):
+                self.assertNotIn(mark, html)
+
     def test_story_headline_matches_emerging_search_intent(self):
         story = parse(PUBLIC / "story" / "index.html")
         headline = story.h1_text.lower()
@@ -327,7 +389,7 @@ class ContentStrategyTests(unittest.TestCase):
         articles = [block for block in blocks if block.get("@type") == "Article"]
         self.assertEqual(len(articles), 1)
         self.assertEqual(articles[0].get("url"), "https://mokhacaffe.com/story/")
-        self.assertEqual(articles[0].get("headline"), "Al-Mokha: the port that named coffee")
+        self.assertEqual(articles[0].get("headline"), "Al-Mokha: the coffee port behind mocha")
 
     def test_coffee_bean_types_guide_is_published_and_connected(self):
         guide_path = "/journal/coffee-bean-types/"
