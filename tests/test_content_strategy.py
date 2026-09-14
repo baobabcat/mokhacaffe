@@ -128,6 +128,45 @@ class ContentStrategyTests(unittest.TestCase):
             with self.subTest(source=source):
                 self.assertIn(source, article.anchors)
 
+    def test_mocha_meanings_article_uses_pinned_sources_and_current_metadata(self):
+        article_path = PUBLIC / "journal" / "what-mocha-really-means" / "index.html"
+        article = parse(article_path)
+        for source in (
+            "https://en.wikipedia.org/w/index.php?title=Mokha&oldid=1374419597",
+            "https://en.wikipedia.org/w/index.php?title=Caff%C3%A8_mocha&oldid=1347818972",
+        ):
+            with self.subTest(source=source):
+                self.assertIn(source, article.anchors)
+
+        html = article_path.read_text()
+        article_data = next(
+            json.loads(block)
+            for block in article.jsonld
+            if json.loads(block).get("@type") == "Article"
+        )
+        self.assertEqual(article_data.get("datePublished"), "2026-08-25")
+        self.assertEqual(article_data.get("dateModified"), "2026-09-14")
+        self.assertIn("Updated 2026-09-14", html)
+        self.assertNotIn("Yemeni coffee remains rare and expensive", html)
+        self.assertNotIn("The two failure modes", html)
+
+        sitemap = ET.parse(PUBLIC / "sitemap.xml")
+        namespace = {"s": "http://www.sitemaps.org/schemas/sitemap/0.9"}
+        lastmods = {
+            node.findtext("s:loc", namespaces=namespace): node.findtext(
+                "s:lastmod", namespaces=namespace
+            )
+            for node in sitemap.findall("s:url", namespace)
+        }
+        self.assertEqual(
+            lastmods["https://mokhacaffe.com/journal/what-mocha-really-means/"],
+            article_data["dateModified"],
+        )
+
+        for mark in ("—", "–", "“", "”"):
+            with self.subTest(mark=mark):
+                self.assertNotIn(mark, html)
+
     def test_better_coffee_pages_use_consistent_sourced_moka_grind_guidance(self):
         hub = parse(HUB_FILE)
         chart_path = PUBLIC / "coffee-grind-size-chart" / "index.html"
@@ -268,7 +307,7 @@ class ContentStrategyTests(unittest.TestCase):
         )
         self.assertEqual(
             feed.getroot().findtext("a:updated", namespaces=atom),
-            "2026-09-13T00:00:00Z",
+            "2026-09-14T00:00:00Z",
         )
 
         for mark in ("—", "–", "“", "”"):
