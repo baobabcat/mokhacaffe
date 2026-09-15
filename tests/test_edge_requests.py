@@ -227,8 +227,10 @@ class AcquisitionSummaryTests(unittest.TestCase):
 
         self.assertIn("refusing to report potentially truncated edge data", str(error.exception))
 
-    def test_query_requests_method_but_not_unavailable_referrer(self):
+    def test_query_uses_half_open_time_windows_without_unavailable_referrer(self):
         self.assertIn("clientRequestHTTPMethodName", edge_requests.QUERY)
+        self.assertIn("datetime_geq: $since, datetime_lt: $until", edge_requests.QUERY)
+        self.assertNotIn("datetime_leq", edge_requests.QUERY)
         self.assertNotIn("clientRefererHost", edge_requests.QUERY)
 
     def test_canonical_content_requests_exclude_assets_errors_and_unsafe_methods(self):

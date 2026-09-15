@@ -34,7 +34,7 @@ GROUP_LIMIT = 500
 QUERY = """query($zone: String!, $since: Time!, $until: Time!) {
   viewer { zones(filter: {zoneTag: $zone}) {
     httpRequestsAdaptiveGroups(limit: 500,
-        filter: {datetime_geq: $since, datetime_leq: $until}) {
+        filter: {datetime_geq: $since, datetime_lt: $until}) {
       count
       dimensions {
         clientRequestPath
@@ -326,8 +326,8 @@ def main():
 
     # Free-plan quota: httpRequestsAdaptiveGroups windows are capped at 1 day
     # (verified 2026-08-31, GraphQL 'quota' error) — query daily slices and
-    # merge. Overlapping boundary rows are double-counted at slice seams; at
-    # ~150 req/day this rounding noise is immaterial and stated here.
+    # merge. Half-open [since, until) filters prevent boundary events from being
+    # counted in both adjacent slices.
     rows = []
     cursor = start
     while cursor < now:
