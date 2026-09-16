@@ -309,6 +309,29 @@ def format_feed_activity(groups):
     return "\n".join(lines)
 
 
+def format_crawler_user_agents(groups):
+    """Format crawler-signature rows after applying shared UA precedence."""
+    bot_total = 0
+    bot_rows = {}
+    for group in groups:
+        dimensions = group["dimensions"]
+        ua = dimensions.get("userAgent") or ""
+        if classify_user_agent(ua) != "known crawler signatures":
+            continue
+        bot_total += group["count"]
+        key = ua
+        bot_rows[key] = bot_rows.get(key, 0) + group["count"]
+
+    lines = ["## search/AI crawler user-agents (indexing pipeline signal)"]
+    if bot_rows:
+        for ua, count in sorted(bot_rows.items(), key=lambda item: -item[1]):
+            lines.append(f"{count:>6}  {ua}")
+        lines.append(f"   --> crawler requests: {bot_total}")
+    else:
+        lines.append("   none observed in window")
+    return "\n".join(lines)
+
+
 def guard_group_limit(groups, since, until):
     """Stop when the GraphQL group cap may have omitted low-volume rows."""
     if len(groups) >= GROUP_LIMIT:
@@ -382,21 +405,7 @@ def main():
     print("\n" + format_search_crawler_discovery_activity(groups))
     print("\n" + format_feed_activity(groups))
 
-    print("\n## search/AI crawler user-agents (indexing pipeline signal)")
-    bot_total = 0
-    bot_rows = {}
-    for g in groups:
-        ua = (g["dimensions"].get("userAgent") or "").lower()
-        if any(b in ua for b in BOT_UAS):
-            bot_total += g["count"]
-            key = (g["dimensions"]["userAgent"] or "")[:110]
-            bot_rows[key] = bot_rows.get(key, 0) + g["count"]
-    if bot_rows:
-        for ua, c in sorted(bot_rows.items(), key=lambda x: -x[1]):
-            print(f"{c:>6}  {ua}")
-        print(f"   --> crawler requests: {bot_total}")
-    else:
-        print("   none observed in window")
+    print("\n" + format_crawler_user_agents(groups))
 
 
 if __name__ == "__main__":

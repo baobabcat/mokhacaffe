@@ -249,6 +249,37 @@ class AcquisitionSummaryTests(unittest.TestCase):
         self.assertIn("other or unidentified clients: 6", report)
         self.assertIn("do not prove a subscription or distinct reader", report)
 
+    def test_crawler_user_agent_report_applies_site_check_precedence(self):
+        groups = [
+            group(4, "/story/", user_agent="Googlebot/2.1"),
+            group(7, "/", user_agent="mokha-seo-audit/1.0 Googlebot/2.1"),
+            group(3, "/feed.xml", user_agent="ClaudeBot/1.0"),
+            group(2, "/robots.txt", user_agent="Mozilla/5.0"),
+        ]
+
+        report = edge_requests.format_crawler_user_agents(groups)
+
+        self.assertIn("     4  Googlebot/2.1", report)
+        self.assertIn("     3  ClaudeBot/1.0", report)
+        self.assertIn("--> crawler requests: 7", report)
+        self.assertNotIn("mokha-seo-audit", report)
+        self.assertNotIn("crawler requests: 14", report)
+
+    def test_crawler_user_agent_report_keeps_signature_beyond_110_characters(self):
+        user_agent = (
+            "Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X Build/MMB29P) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Mobile "
+            "Safari/537.36 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"
+        )
+
+        report = edge_requests.format_crawler_user_agents(
+            [group(2, "/", user_agent=user_agent)]
+        )
+
+        self.assertIn(user_agent, report)
+        self.assertIn("Googlebot/2.1", report)
+        self.assertIn("--> crawler requests: 2", report)
+
     def test_edge_group_limit_fails_closed_before_reporting(self):
         groups = [group(1, f"/probe-{index}") for index in range(edge_requests.GROUP_LIMIT)]
 
