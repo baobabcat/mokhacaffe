@@ -120,18 +120,32 @@ class AcquisitionSummaryTests(unittest.TestCase):
             },
         )
 
-    def test_acquisition_report_separates_known_crawlers_from_other_requests(self):
+    def test_acquisition_report_separates_known_automation_and_browser_requests(self):
         groups = [
             group(4, "/journal/coffee-bean-types/", user_agent="Googlebot/2.1"),
             group(3, "/journal/coffee-bean-types/", user_agent="Mozilla/5.0"),
+            group(2, "/story/", user_agent="mokha-seo-audit/1.0"),
+            group(1, "/contact/", user_agent="curl/8.5.0"),
+            group(5, "/story/", user_agent="mokha-seo-audit/1.0 Googlebot/2.1"),
         ]
 
         report = edge_requests.format_acquisition(groups)
 
-        self.assertIn("canonical content requests with a known crawler signature: 4", report)
-        self.assertIn("other canonical content requests: 3", report)
-        self.assertIn("not verified human visits", report)
-        self.assertEqual(sum(edge_requests.canonical_content_request_split(groups)), 7)
+        self.assertIn("known crawler signatures: 4", report)
+        self.assertIn("site checks: 7", report)
+        self.assertIn("browser-like signatures: 3", report)
+        self.assertIn("other or unidentified clients: 1", report)
+        self.assertNotIn("googlebot  /story/", report)
+        self.assertIn("do not establish human visits", report)
+        self.assertEqual(
+            edge_requests.canonical_content_request_categories(groups),
+            {
+                "known crawler signatures": 4,
+                "site checks": 7,
+                "browser-like signatures": 3,
+                "other or unidentified clients": 1,
+            },
+        )
 
     def test_acquisition_report_breaks_known_crawlers_down_by_canonical_path(self):
         groups = [

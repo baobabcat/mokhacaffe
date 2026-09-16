@@ -116,10 +116,26 @@ def canonical_content_requests(groups):
     return requests
 
 
-def canonical_content_request_split(groups):
-    """Split canonical requests into known crawlers and all other user agents."""
-    crawler = 0
-    other = 0
+def classify_user_agent(user_agent):
+    """Return one mutually exclusive broad user-agent category."""
+    ua = (user_agent or "").lower()
+    if any(signature in ua for signature in SITE_CHECK_UAS):
+        return "site checks"
+    if any(bot in ua for bot in BOT_UAS):
+        return "known crawler signatures"
+    if "mozilla/" in ua:
+        return "browser-like signatures"
+    return "other or unidentified clients"
+
+
+def canonical_content_request_categories(groups):
+    """Classify successful canonical requests by broad user-agent signature."""
+    counts = {
+        "known crawler signatures": 0,
+        "site checks": 0,
+        "browser-like signatures": 0,
+        "other or unidentified clients": 0,
+    }
     for group in groups:
         dimensions = group["dimensions"]
         if (
@@ -127,12 +143,9 @@ def canonical_content_request_split(groups):
             and dimensions.get("edgeResponseStatus") == 200
             and dimensions.get("clientRequestHTTPMethodName") in ("GET", "HEAD")
         ):
-            ua = (dimensions.get("userAgent") or "").lower()
-            if any(bot in ua for bot in BOT_UAS):
-                crawler += group["count"]
-            else:
-                other += group["count"]
-    return crawler, other
+            category = classify_user_agent(dimensions.get("userAgent"))
+            counts[category] += group["count"]
+    return counts
 
 
 def canonical_crawler_requests_by_path(groups):
@@ -141,12 +154,16 @@ def canonical_crawler_requests_by_path(groups):
     for group in groups:
         dimensions = group["dimensions"]
         path = dimensions.get("clientRequestPath")
-        ua = (dimensions.get("userAgent") or "").lower()
-        crawler_name = next((bot for bot in BOT_UAS if bot in ua), None)
+        ua = dimensions.get("userAgent")
+        crawler_name = next(
+            (bot for bot in BOT_UAS if bot in (ua or "").lower()),
+            None,
+        )
         if (
             path in CANONICAL_CONTENT_PATHS
             and dimensions.get("edgeResponseStatus") == 200
             and dimensions.get("clientRequestHTTPMethodName") in ("GET", "HEAD")
+            and classify_user_agent(ua) == "known crawler signatures"
             and crawler_name
         ):
             key = (crawler_name, path)
@@ -157,14 +174,13 @@ def canonical_crawler_requests_by_path(groups):
 def format_acquisition(groups):
     """Format successful canonical-content request counts."""
     content = canonical_content_requests(groups)
-    crawler, other = canonical_content_request_split(groups)
+    categories = canonical_content_request_categories(groups)
     crawler_paths = canonical_crawler_requests_by_path(groups)
     lines = [
         "## canonical content requests",
         f"canonical content requests: {sum(content.values())}",
-        f"canonical content requests with a known crawler signature: {crawler}",
-        f"other canonical content requests: {other}",
     ]
+    lines.extend(f"{label}: {count}" for label, count in categories.items())
     for path, count in sorted(content.items(), key=lambda item: (-item[1], item[0])):
         lines.append(f"{count:>6}  {path}")
     if crawler_paths:
@@ -176,7 +192,7 @@ def format_acquisition(groups):
     else:
         lines.append("known crawler signatures by canonical path: none observed")
     lines.append(
-        "note: other requests are not verified human visits; self traffic and unidentified bots may remain."
+        "note: user-agent categories can be spoofed and do not establish human visits or distinct visitors."
     )
     return "\n".join(lines)
 
