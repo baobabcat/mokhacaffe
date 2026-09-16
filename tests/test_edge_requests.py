@@ -171,6 +171,11 @@ class AcquisitionSummaryTests(unittest.TestCase):
             group(5, "/journal/coffee-bean-types/", user_agent="ClaudeBot/1.0"),
             group(6, "/contact/", status=404, user_agent="Googlebot/2.1"),
             group(7, "/better-coffee-at-home/", method="POST", user_agent="bingbot/2.0"),
+            group(
+                8,
+                "/coffee-ratio-calculator/",
+                user_agent="mokha-seo-audit/1.0 Googlebot/2.1",
+            ),
         ]
 
         report = edge_requests.format_search_crawler_coverage(groups)
@@ -185,6 +190,7 @@ class AcquisitionSummaryTests(unittest.TestCase):
         self.assertNotIn("coffee-bean-types", report)
         self.assertNotIn("/contact/", report)
         self.assertNotIn("/better-coffee-at-home/", report)
+        self.assertNotIn("/coffee-ratio-calculator/", report)
         self.assertIn("user-agent signatures are not verified crawler identities", report)
 
     def test_search_crawler_discovery_activity_reports_pipeline_paths(self):
@@ -198,6 +204,16 @@ class AcquisitionSummaryTests(unittest.TestCase):
             group(7, "/sitemap.xml", status=404, user_agent="bingbot/2.0"),
             group(8, "/feed.xml", method="POST", user_agent="bingbot/2.0"),
             group(9, "/sitemap.xml", user_agent="ClaudeBot/1.0"),
+            group(
+                10,
+                "/robots.txt",
+                user_agent="mokha-seo-audit/1.0 Googlebot/2.1",
+            ),
+            group(
+                11,
+                "/contact/",
+                user_agent="mokha-seo-audit/1.0 Googlebot/2.1",
+            ),
         ]
 
         report = edge_requests.format_search_crawler_discovery_activity(groups)

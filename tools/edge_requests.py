@@ -207,6 +207,8 @@ def format_search_crawler_coverage(groups):
             path not in CANONICAL_CONTENT_PATHS
             or dimensions.get("edgeResponseStatus") != 200
             or dimensions.get("clientRequestHTTPMethodName") not in ("GET", "HEAD")
+            or classify_user_agent(dimensions.get("userAgent"))
+            != "known crawler signatures"
         ):
             continue
         ua = (dimensions.get("userAgent") or "").lower()
@@ -238,6 +240,8 @@ def format_search_crawler_discovery_activity(groups):
         if (
             dimensions.get("edgeResponseStatus") != 200
             or dimensions.get("clientRequestHTTPMethodName") not in ("GET", "HEAD")
+            or classify_user_agent(dimensions.get("userAgent"))
+            != "known crawler signatures"
         ):
             continue
         ua = (dimensions.get("userAgent") or "").lower()
