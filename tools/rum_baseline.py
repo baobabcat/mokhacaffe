@@ -16,8 +16,11 @@ Usage: python3 tools/rum_baseline.py [--hours 24] [--all-sites]
 import argparse
 import json
 import os
+from pathlib import Path
 import sys
+import urllib.parse
 import urllib.request
+import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta, timezone
 
 ACCT = "76adb356ff1550c08ef68729faf5f03e"
@@ -39,6 +42,30 @@ QUERY = """query($acct: String!, $since: Time!) {
     } } } }"""
 
 OWN_HOST = "mokhacaffe.com"
+ROOT = Path(__file__).resolve().parent.parent
+SITEMAP = ROOT / "public" / "sitemap.xml"
+
+
+def sitemap_canonical_paths(path=SITEMAP):
+    """Return same-origin canonical paths from the deployable sitemap."""
+    tree = ET.parse(path)
+    namespace = {"s": "http://www.sitemaps.org/schemas/sitemap/0.9"}
+    if tree.getroot().tag != f"{{{namespace['s']}}}urlset":
+        raise ValueError("expected a sitemap urlset")
+    paths = set()
+    for loc in tree.findall(".//s:loc", namespace):
+        if not loc.text:
+            continue
+        url = urllib.parse.urlsplit(loc.text.strip())
+        if url.scheme != "https" or url.netloc != OWN_HOST:
+            raise ValueError(f"unexpected sitemap origin: {loc.text.strip()}")
+        paths.add(url.path or "/")
+    if not paths:
+        raise ValueError("sitemap contains no canonical URLs")
+    return paths
+
+
+CANONICAL_PATHS = sitemap_canonical_paths()
 
 
 def guard_truncation(name, groups):
@@ -122,6 +149,18 @@ def main():
         g["count"]
         for g in path_groups
         if (g.get("dimensions") or {}).get("siteTag") == LIVE_SITE
+    )
+    canonical_total = sum(
+        g["count"]
+        for g in path_groups
+        if (g.get("dimensions") or {}).get("siteTag") == LIVE_SITE
+        and (g.get("dimensions") or {}).get("requestHost") == OWN_HOST
+        and (g.get("dimensions") or {}).get("requestPath") in CANONICAL_PATHS
+    )
+    print(f"canonical pageloads (live site): {canonical_total}")
+    print(
+        "noncanonical or non-apex pageloads (live site): "
+        f"{live_total - canonical_total}"
     )
     print(f"total (live site): {live_total}")
     print("note: self/verification visits are included; label them when recording baselines.")

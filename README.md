@@ -16,9 +16,10 @@ Cloudflare Workers Static Assets, served by a tiny Worker that 301s www → apex
   from the Better Coffee at Home guide. It sends a `ratio_calculation` GA4 event
   on form submission with only the calculation direction, never entered amounts.
 - `tools/rum_baseline.py` — Web Analytics pageload and external-referrer baseline
-  via separate GraphQL grouping aliases (browser-only, excludes bot and every
-  mokhacaffe.com subdomain from its referrer summary; aborts rather than report
-  potentially truncated groups; never queries visitor IPs)
+  via separate GraphQL grouping aliases. It reports sitemap-listed apex
+  pageloads separately from missing paths and stray hosts, excludes bots and every
+  mokhacaffe.com subdomain from its referrer summary, aborts rather than report
+  potentially truncated groups, and never queries visitor IPs.
 - Google Analytics 4 measurement `G-HJNKHJZZLL` is installed on every HTML page.
   The CSP permits only the required Google tag and analytics origins and
   authorizes the inline initializer by SHA-256 rather than `'unsafe-inline'`.

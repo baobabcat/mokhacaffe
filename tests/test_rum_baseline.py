@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 import sys
+import tempfile
 import unittest
 from unittest import mock
 
@@ -30,6 +31,43 @@ def group(count, path="/", referrer="", bot=0, site=None):
 
 
 class RumReferralTests(unittest.TestCase):
+    def test_canonical_paths_reject_an_unexpected_origin(self):
+        sitemap = """<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">
+  <url><loc>https://other.example/</loc></url>
+</urlset>
+"""
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "sitemap.xml"
+            path.write_text(sitemap, encoding="utf-8")
+
+            with self.assertRaisesRegex(ValueError, "unexpected sitemap origin"):
+                rum_baseline.sitemap_canonical_paths(path)
+
+    def test_canonical_paths_reject_an_empty_urlset(self):
+        sitemap = """<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\"></urlset>
+"""
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "sitemap.xml"
+            path.write_text(sitemap, encoding="utf-8")
+
+            with self.assertRaisesRegex(ValueError, "no canonical URLs"):
+                rum_baseline.sitemap_canonical_paths(path)
+
+    def test_canonical_paths_reject_a_sitemap_index(self):
+        sitemap = """<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+<sitemapindex xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">
+  <sitemap><loc>https://mokhacaffe.com/section-sitemap.xml</loc></sitemap>
+</sitemapindex>
+"""
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "sitemap.xml"
+            path.write_text(sitemap, encoding="utf-8")
+
+            with self.assertRaisesRegex(ValueError, "expected a sitemap urlset"):
+                rum_baseline.sitemap_canonical_paths(path)
+
     def test_query_uses_separate_path_and_referrer_groupings(self):
         compact_query = " ".join(rum_baseline.QUERY.split())
 
@@ -77,6 +115,48 @@ class RumReferralTests(unittest.TestCase):
         self.assertEqual(output.count("mokhacaffe.com/menu"), 1)
         self.assertIn("    5  mokhacaffe.com/menu", output)
         self.assertIn("    2  google.com", output)
+
+    def test_main_separates_canonical_from_noncanonical_pageloads(self):
+        response = {
+            "data": {
+                "viewer": {
+                    "accounts": [{
+                        "pathGroups": [
+                            group(5, path="/"),
+                            group(3, path="/definitely-missing"),
+                            {
+                                "count": 4,
+                                "dimensions": {
+                                    "siteTag": rum_baseline.LIVE_SITE,
+                                    "requestHost": "www.mokhacaffe.com",
+                                    "requestPath": "/",
+                                    "refererHost": "",
+                                    "bot": 0,
+                                },
+                            },
+                        ],
+                        "referrerGroups": [],
+                    }]
+                }
+            }
+        }
+        stdout = io.StringIO()
+        with (
+            mock.patch.dict(os.environ, {"CLOUDFLARE_API_TOKEN": "test-token"}),
+            mock.patch.object(sys, "argv", ["rum_baseline.py"]),
+            mock.patch.object(
+                rum_baseline.urllib.request,
+                "urlopen",
+                return_value=io.BytesIO(json.dumps(response).encode()),
+            ),
+            contextlib.redirect_stdout(stdout),
+        ):
+            rum_baseline.main()
+
+        output = stdout.getvalue()
+        self.assertIn("canonical pageloads (live site): 5", output)
+        self.assertIn("noncanonical or non-apex pageloads (live site): 7", output)
+        self.assertIn("total (live site): 12", output)
 
     def test_main_ignores_path_rows_with_missing_or_null_dimensions(self):
         response = {
