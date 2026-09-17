@@ -18,8 +18,9 @@ Cloudflare Workers Static Assets, served by a tiny Worker that 301s www → apex
 - `tools/rum_baseline.py` — Web Analytics pageload and external-referrer baseline
   via separate GraphQL grouping aliases. It reports sitemap-listed apex
   pageloads separately from missing paths and stray hosts, excludes bots and every
-  mokhacaffe.com subdomain from its referrer summary, aborts rather than report
-  potentially truncated groups, and never queries visitor IPs.
+  mokhacaffe.com subdomain from its referrer summary, uses one fixed half-open
+  time window for both GraphQL groupings, aborts rather than report potentially
+  truncated groups, and never queries visitor IPs.
 - Google Analytics 4 measurement `G-HJNKHJZZLL` is installed on every HTML page.
   The CSP permits only the required Google tag and analytics origins and
   authorizes the inline initializer by SHA-256 rather than `'unsafe-inline'`.

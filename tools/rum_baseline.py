@@ -28,15 +28,15 @@ LIVE_SITE = "f43ed716bfde47949c61dbbb55a478ab"
 GQL = "https://api.cloudflare.com/client/v4/graphql"
 GROUP_LIMIT = 100
 
-QUERY = """query($acct: String!, $since: Time!) {
+QUERY = """query($acct: String!, $since: Time!, $until: Time!) {
   viewer { accounts(filter: {accountTag: $acct}) {
     pathGroups: rumPageloadEventsAdaptiveGroups(limit: 100,
-        filter: {datetime_geq: $since}) {
+        filter: {datetime_geq: $since, datetime_lt: $until}) {
       count
       dimensions { siteTag requestHost requestPath }
     }
     referrerGroups: rumPageloadEventsAdaptiveGroups(limit: 100,
-        filter: {datetime_geq: $since}) {
+        filter: {datetime_geq: $since, datetime_lt: $until}) {
       count
       dimensions { siteTag refererHost bot }
     } } } }"""
@@ -118,10 +118,15 @@ def main():
     token = os.environ.get("CLOUDFLARE_API_TOKEN")
     if not token:
         sys.exit("CLOUDFLARE_API_TOKEN not set")
-    since = (datetime.now(timezone.utc) - timedelta(hours=args.hours)
-             ).strftime("%Y-%m-%dT%H:%M:%SZ")
+    now = datetime.now(timezone.utc)
+    since = (now - timedelta(hours=args.hours)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    until = now.strftime("%Y-%m-%dT%H:%M:%SZ")
     body = json.dumps({"query": QUERY,
-                       "variables": {"acct": ACCT, "since": since}}).encode()
+                       "variables": {
+                           "acct": ACCT,
+                           "since": since,
+                           "until": until,
+                       }}).encode()
     req = urllib.request.Request(GQL, data=body, headers={
         "Authorization": f"Bearer {token}", "Content-Type": "application/json"})
     with urllib.request.urlopen(req, timeout=30) as r:
@@ -134,7 +139,7 @@ def main():
     guard_truncation("pathGroups", path_groups)
     guard_truncation("referrerGroups", referrer_groups)
 
-    print(f"# RUM pageloads, last {args.hours}h (since {since})")
+    print(f"# RUM pageloads, last {args.hours}h ({since} to {until})")
     for g in sorted(path_groups, key=lambda x: -x["count"]):
         d = g.get("dimensions")
         if not isinstance(d, dict):

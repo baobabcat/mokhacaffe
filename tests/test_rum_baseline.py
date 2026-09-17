@@ -78,10 +78,44 @@ class RumReferralTests(unittest.TestCase):
         )
         self.assertIn("referrerGroups: rumPageloadEventsAdaptiveGroups", compact_query)
         self.assertIn("dimensions { siteTag refererHost bot }", compact_query)
+        self.assertIn("$until: Time!", compact_query)
+        self.assertEqual(compact_query.count("datetime_lt: $until"), 2)
         self.assertNotIn(
             "dimensions { siteTag requestHost requestPath refererHost bot }",
             compact_query,
         )
+
+    def test_main_sends_a_shared_bounded_window(self):
+        response = {
+            "data": {
+                "viewer": {
+                    "accounts": [{"pathGroups": [], "referrerGroups": []}]
+                }
+            }
+        }
+        captured = {}
+
+        def open_request(request, timeout):
+            captured.update(json.loads(request.data))
+            return io.BytesIO(json.dumps(response).encode())
+
+        with (
+            mock.patch.dict(os.environ, {"CLOUDFLARE_API_TOKEN": "test-token"}),
+            mock.patch.object(sys, "argv", ["rum_baseline.py"]),
+            mock.patch.object(
+                rum_baseline.urllib.request,
+                "urlopen",
+                side_effect=open_request,
+            ),
+            contextlib.redirect_stdout(io.StringIO()),
+        ):
+            rum_baseline.main()
+
+        variables = captured["variables"]
+        self.assertEqual(variables["acct"], rum_baseline.ACCT)
+        self.assertRegex(variables["since"], r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
+        self.assertRegex(variables["until"], r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
+        self.assertLess(variables["since"], variables["until"])
 
     def test_main_uses_path_groups_without_referrer_fragmentation(self):
         response = {
