@@ -280,6 +280,25 @@ class AcquisitionSummaryTests(unittest.TestCase):
         self.assertIn("Googlebot/2.1", report)
         self.assertIn("--> crawler requests: 2", report)
 
+    def test_crawler_user_agent_report_excludes_errors_and_unsafe_methods(self):
+        groups = [
+            group(4, "/", user_agent="Googlebot/2.1"),
+            group(3, "/robots.txt", method="HEAD", user_agent="bingbot/2.0"),
+            group(8, "/missing", status=404, user_agent="ClaudeBot/1.0"),
+            group(6, "/contact/", method="POST", user_agent="GPTBot/1.0"),
+        ]
+
+        report = edge_requests.format_crawler_user_agents(groups)
+
+        self.assertIn("successful GET/HEAD crawler-signature requests", report)
+        self.assertIn("     4  Googlebot/2.1", report)
+        self.assertIn("     3  bingbot/2.0", report)
+        self.assertIn("--> crawler requests: 7", report)
+        self.assertIn("not verified crawler identities", report)
+        self.assertIn("do not prove indexing", report)
+        self.assertNotIn("ClaudeBot", report)
+        self.assertNotIn("GPTBot", report)
+
     def test_edge_group_limit_fails_closed_before_reporting(self):
         groups = [group(1, f"/probe-{index}") for index in range(edge_requests.GROUP_LIMIT)]
 

@@ -310,25 +310,32 @@ def format_feed_activity(groups):
 
 
 def format_crawler_user_agents(groups):
-    """Format crawler-signature rows after applying shared UA precedence."""
+    """Format successful crawler-signature requests after shared UA precedence."""
     bot_total = 0
     bot_rows = {}
     for group in groups:
         dimensions = group["dimensions"]
         ua = dimensions.get("userAgent") or ""
-        if classify_user_agent(ua) != "known crawler signatures":
+        if (
+            dimensions.get("edgeResponseStatus") != 200
+            or dimensions.get("clientRequestHTTPMethodName") not in ("GET", "HEAD")
+            or classify_user_agent(ua) != "known crawler signatures"
+        ):
             continue
         bot_total += group["count"]
         key = ua
         bot_rows[key] = bot_rows.get(key, 0) + group["count"]
 
-    lines = ["## search/AI crawler user-agents (indexing pipeline signal)"]
+    lines = ["## successful GET/HEAD crawler-signature requests"]
     if bot_rows:
         for ua, count in sorted(bot_rows.items(), key=lambda item: -item[1]):
             lines.append(f"{count:>6}  {ua}")
         lines.append(f"   --> crawler requests: {bot_total}")
     else:
         lines.append("   none observed in window")
+    lines.append(
+        "note: user-agent signatures are not verified crawler identities; successful requests do not prove indexing."
+    )
     return "\n".join(lines)
 
 
