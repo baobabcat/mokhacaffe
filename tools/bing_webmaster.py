@@ -37,6 +37,7 @@ import json
 import os
 import re
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -74,16 +75,23 @@ def call(method: str, params: dict | None = None, body: dict | None = None) -> d
         data = json.dumps(body).encode()
         headers["Content-Type"] = "application/json; charset=utf-8"
     req = urllib.request.Request(url, data=data, headers=headers)
-    try:
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            payload = resp.read().decode()
-    except urllib.error.HTTPError as e:
-        detail = e.read().decode(errors="replace")[:300]
-        if e.code in (401, 403) or "InvalidApiKey" in detail:
-            sys.exit(f"error: HTTP {e.code} — API key invalid or not authorized for this site.")
-        sys.exit(f"error: HTTP {e.code} from {method}: {detail}")
-    except urllib.error.URLError as e:
-        sys.exit(f"error: transport failure calling {method}: {e.reason}")
+    payload = ""
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                payload = resp.read().decode()
+            break
+        except urllib.error.HTTPError as e:
+            raw_detail = e.read().decode(errors="replace")
+            detail = raw_detail[:300]
+            if e.code in (401, 403) or "InvalidApiKey" in raw_detail:
+                sys.exit(f"error: HTTP {e.code} — API key invalid or not authorized for this site.")
+            if e.code == 400 and "ThrottleHost" in raw_detail and attempt < 2:
+                time.sleep(2 ** (attempt + 1))
+                continue
+            sys.exit(f"error: HTTP {e.code} from {method}: {detail}")
+        except urllib.error.URLError as e:
+            sys.exit(f"error: transport failure calling {method}: {e.reason}")
     try:
         out = json.loads(payload)
     except json.JSONDecodeError:
