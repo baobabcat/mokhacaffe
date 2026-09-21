@@ -19,6 +19,7 @@ class ReleaseVerificationTests(unittest.TestCase):
             "git diff --check",
             "python3 tools/seo_audit.py",
             "python3 tools/check_sources.py",
+            'npx --no-install wrangler check startup --outfile "$STARTUP_PROFILE"',
             "npx --no-install wrangler deploy --dry-run",
             "operations/mokhacaffe-health.sh",
         ]
@@ -27,6 +28,8 @@ class ReleaseVerificationTests(unittest.TestCase):
                 self.assertIn(command, script)
 
         self.assertIn("set -euo pipefail", script)
+        self.assertIn('mktemp -- "${TMPDIR:-/tmp}/mokhacaffe-startup.XXXXXX.cpuprofile"', script)
+        self.assertIn('rm -f -- "$STARTUP_PROFILE"', script)
         self.assertNotIn("npx wrangler deploy\n", script)
         self.assertTrue(SCRIPT.stat().st_mode & stat.S_IXUSR)
 

@@ -15,8 +15,9 @@ Cloudflare Workers Static Assets, served by a tiny Worker that 301s www → apex
   identifiable first-party user agent so its requests can be separated in edge
   reports. `operations/mokhacaffe-health.sh` adds the HTTP and www redirect checks.
 - `operations/verify-release.sh` — runs the complete non-mutating release gate,
-  including tests, feed synchronization, production audits, a Wrangler dry run,
-  and the production health matrix. Run it before committing or deploying.
+  including tests, feed synchronization, production audits, a temporary Worker
+  startup profile, a Wrangler dry run, and the production health matrix. Run it
+  before committing or deploying.
 - `tools/check_sources.py` — read-only check of external links on Article pages;
   confirmed 404/410 responses fail, access blocks and temporary errors warn, and
   Article pages without an external source link are listed for editorial review

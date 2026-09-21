@@ -5,6 +5,9 @@ set -euo pipefail
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO"
 
+STARTUP_PROFILE="$(mktemp -- "${TMPDIR:-/tmp}/mokhacaffe-startup.XXXXXX.cpuprofile")"
+trap 'rm -f -- "$STARTUP_PROFILE"' EXIT
+
 run() {
   printf '\n==> %s\n' "$1"
   shift
@@ -19,6 +22,7 @@ run "Working-tree whitespace" git diff --check
 run "Staged whitespace" git diff --cached --check
 run "Production SEO audit" python3 tools/seo_audit.py
 run "Editorial source audit" python3 tools/check_sources.py
+run "Worker startup profile" npx --no-install wrangler check startup --outfile "$STARTUP_PROFILE"
 run "Cloudflare deployment dry run" npx --no-install wrangler deploy --dry-run
 run "Production health matrix" operations/mokhacaffe-health.sh
 
