@@ -307,6 +307,27 @@ class AcquisitionSummaryTests(unittest.TestCase):
 
         self.assertIn("refusing to report potentially truncated edge data", str(error.exception))
 
+    def test_dense_edge_window_is_bisected_until_each_query_is_complete(self):
+        since = edge_requests.datetime(2026, 9, 10, tzinfo=edge_requests.timezone.utc)
+        until = since + edge_requests.timedelta(hours=24)
+        calls = []
+
+        def fetch(_token, slice_since, slice_until):
+            calls.append((slice_since, slice_until))
+            start = edge_requests.datetime.fromisoformat(slice_since.replace("Z", "+00:00"))
+            end = edge_requests.datetime.fromisoformat(slice_until.replace("Z", "+00:00"))
+            if end - start > edge_requests.timedelta(hours=12):
+                raise edge_requests.GroupLimitError("dense slice")
+            return [group(1, f"/slice-{len(calls)}")]
+
+        rows = edge_requests.run_complete_window("token", since, until, fetch=fetch)
+
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(len(calls), 3)
+        self.assertEqual(calls[1][0], calls[0][0])
+        self.assertEqual(calls[1][1], calls[2][0])
+        self.assertEqual(calls[2][1], calls[0][1])
+
     def test_query_uses_half_open_time_windows_without_unavailable_referrer(self):
         self.assertIn("clientRequestHTTPMethodName", edge_requests.QUERY)
         self.assertIn("datetime_geq: $since, datetime_lt: $until", edge_requests.QUERY)

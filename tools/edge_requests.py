@@ -30,6 +30,7 @@ from datetime import datetime, timedelta, timezone
 ZONE = "df47a612388511375ea5fc45be07040d"  # mokhacaffe.com (verified 2026-08-31)
 GQL = "https://api.cloudflare.com/client/v4/graphql"
 GROUP_LIMIT = 500
+MIN_SLICE = timedelta(minutes=1)
 
 QUERY = """query($zone: String!, $since: Time!, $until: Time!) {
   viewer { zones(filter: {zoneTag: $zone}) {
@@ -342,10 +343,14 @@ def format_crawler_user_agents(groups):
 def guard_group_limit(groups, since, until):
     """Stop when the GraphQL group cap may have omitted low-volume rows."""
     if len(groups) >= GROUP_LIMIT:
-        sys.exit(
+        raise GroupLimitError(
             f"edge query returned {len(groups)} rows for {since} to {until} "
             f"(limit {GROUP_LIMIT}); refusing to report potentially truncated edge data"
         )
+
+
+class GroupLimitError(SystemExit):
+    """A GraphQL group result reached the cap and may be incomplete."""
 
 
 def run(token, since, until):
@@ -361,6 +366,22 @@ def run(token, since, until):
     groups = resp["data"]["viewer"]["zones"][0]["httpRequestsAdaptiveGroups"]
     guard_group_limit(groups, since, until)
     return groups
+
+
+def run_complete_window(token, since, until, fetch=run):
+    """Fetch a half-open window, bisecting capped high-cardinality results."""
+    since_text = since.strftime("%Y-%m-%dT%H:%M:%SZ")
+    until_text = until.strftime("%Y-%m-%dT%H:%M:%SZ")
+    try:
+        return fetch(token, since_text, until_text)
+    except GroupLimitError:
+        if until - since <= MIN_SLICE:
+            raise
+        midpoint = since + (until - since) / 2
+        return (
+            run_complete_window(token, since, midpoint, fetch=fetch)
+            + run_complete_window(token, midpoint, until, fetch=fetch)
+        )
 
 
 def main():
@@ -382,8 +403,7 @@ def main():
     cursor = start
     while cursor < now:
         nxt = min(cursor + timedelta(hours=24), now)
-        rows.extend(run(token, cursor.strftime("%Y-%m-%dT%H:%M:%SZ"),
-                        nxt.strftime("%Y-%m-%dT%H:%M:%SZ")))
+        rows.extend(run_complete_window(token, cursor, nxt))
         cursor = nxt
     groups = merge_group_rows(rows)
     total = sum(g["count"] for g in groups)
