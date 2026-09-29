@@ -77,13 +77,12 @@ class RumReferralTests(unittest.TestCase):
             compact_query,
         )
         self.assertIn("referrerGroups: rumPageloadEventsAdaptiveGroups", compact_query)
-        self.assertIn("dimensions { siteTag refererHost bot }", compact_query)
-        self.assertIn("$until: Time!", compact_query)
-        self.assertEqual(compact_query.count("datetime_lt: $until"), 2)
-        self.assertNotIn(
+        self.assertIn(
             "dimensions { siteTag requestHost requestPath refererHost bot }",
             compact_query,
         )
+        self.assertIn("$until: Time!", compact_query)
+        self.assertEqual(compact_query.count("datetime_lt: $until"), 2)
 
     def test_main_sends_a_shared_bounded_window(self):
         response = {
@@ -346,8 +345,13 @@ class RumReferralTests(unittest.TestCase):
         )
 
     def test_referrer_report_lists_external_hosts(self):
-        report = rum_baseline.format_referrers([group(3, referrer="coffee.stackexchange.com")])
-        self.assertIn("3  coffee.stackexchange.com", report)
+        report = rum_baseline.format_referrers([
+            group(3, path="/story/", referrer="coffee.stackexchange.com"),
+            group(2, path="/", referrer="coffee.stackexchange.com"),
+        ])
+        self.assertIn("5  coffee.stackexchange.com", report)
+        self.assertIn("3  coffee.stackexchange.com -> /story/", report)
+        self.assertIn("2  coffee.stackexchange.com -> /", report)
         self.assertIn("not unique visitors", report)
 
 

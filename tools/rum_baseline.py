@@ -38,7 +38,7 @@ QUERY = """query($acct: String!, $since: Time!, $until: Time!) {
     referrerGroups: rumPageloadEventsAdaptiveGroups(limit: 100,
         filter: {datetime_geq: $since, datetime_lt: $until}) {
       count
-      dimensions { siteTag refererHost bot }
+      dimensions { siteTag requestHost requestPath refererHost bot }
     } } } }"""
 
 OWN_HOST = "mokhacaffe.com"
@@ -95,13 +95,41 @@ def external_referrers(groups):
     return referrers
 
 
+def external_referrer_landings(groups):
+    """Aggregate non-bot, off-site referrers by live-site landing path."""
+    landings = {}
+    for group in groups:
+        dimensions = group.get("dimensions") or {}
+        referrer = (dimensions.get("refererHost") or "").lower().rstrip(".")
+        is_bot = dimensions.get("bot") in (1, True, "1", "true")
+        path = dimensions.get("requestPath") or ""
+        if (
+            dimensions.get("siteTag") == LIVE_SITE
+            and dimensions.get("requestHost") == OWN_HOST
+            and path in CANONICAL_PATHS
+            and referrer
+            and referrer != OWN_HOST
+            and not referrer.endswith(f".{OWN_HOST}")
+            and not is_bot
+        ):
+            key = (referrer, path)
+            landings[key] = landings.get(key, 0) + group["count"]
+    return landings
+
+
 def format_referrers(groups):
-    """Format external RUM referrers without path or visitor identifiers."""
+    """Format external RUM referrers and their canonical landing paths."""
     referrers = external_referrers(groups)
+    landings = external_referrer_landings(groups)
     lines = ["## external browser referrers"]
     if referrers:
         for host, count in sorted(referrers.items(), key=lambda item: (-item[1], item[0])):
             lines.append(f"{count:>5}  {host}")
+        lines.append("canonical landing paths:")
+        for (host, path), count in sorted(
+            landings.items(), key=lambda item: (-item[1], item[0])
+        ):
+            lines.append(f"{count:>5}  {host} -> {path}")
     else:
         lines.append("none observed in window")
     lines.append("note: pageload counts are not unique visitors; self traffic may remain.")
