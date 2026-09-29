@@ -38,6 +38,43 @@ class BingWebmasterOutputTests(unittest.TestCase):
         self.assertIn('"Date": "2026-09-01T00:00:00Z"', output.getvalue())
         self.assertNotIn("/Date(", output.getvalue())
 
+    def test_query_stats_prints_totals_across_every_returned_row(self):
+        rows = [
+            {
+                "Date": "/Date(1788134400000)/",
+                "Clicks": 1,
+                "Impressions": 4,
+                "Query": "moka pot",
+            },
+            {
+                "Date": "/Date(1788220800000)/",
+                "Clicks": 0,
+                "Impressions": 3,
+                "Query": "mokha coffee",
+            },
+        ] + [
+            {
+                "Date": "/Date(1788220800000)/",
+                "Clicks": 0,
+                "Impressions": 1,
+                "Query": f"query {number}",
+            }
+            for number in range(19)
+        ]
+
+        with patch.object(bing_webmaster, "call", return_value={"d": rows}):
+            output = io.StringIO()
+            with redirect_stdout(output):
+                bing_webmaster._stats("GetQueryStats")
+
+        report = output.getvalue()
+        self.assertIn(
+            "summary: 21 rows, 26 impressions, 1 click, "
+            "2026-08-31T00:00:00Z to 2026-09-01T00:00:00Z",
+            report,
+        )
+        self.assertIn("... 1 more", report)
+
     def test_url_info_prints_missing_date_sentinel_as_an_iso_date(self):
         payload = {
             "d": {

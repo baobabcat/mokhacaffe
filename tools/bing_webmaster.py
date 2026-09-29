@@ -164,10 +164,39 @@ def cmd_urlinfo(args):
     print(json.dumps(readable_dates(d), indent=2))
 
 
+def _stats_summary(rows):
+    """Summarize every dated click/impression row returned by Bing."""
+    if not rows or not all(
+        isinstance(row, dict)
+        and isinstance(row.get("Clicks"), (int, float))
+        and isinstance(row.get("Impressions"), (int, float))
+        for row in rows
+    ):
+        return None
+    dates = sorted(
+        converted
+        for row in rows
+        if isinstance((converted := readable_dates(row.get("Date"))), str)
+        and converted != row.get("Date")
+    )
+    if not dates:
+        return None
+    clicks = sum(row["Clicks"] for row in rows)
+    impressions = sum(row["Impressions"] for row in rows)
+    click_label = "click" if clicks == 1 else "clicks"
+    impression_label = "impression" if impressions == 1 else "impressions"
+    return (
+        f"summary: {len(rows)} rows, {impressions:g} {impression_label}, "
+        f"{clicks:g} {click_label}, {dates[0]} to {dates[-1]}"
+    )
+
+
 def _stats(method):
     d = call(method, {"siteUrl": SITE}).get("d", [])
     if isinstance(d, list):
         print(f"{method}: {len(d)} rows")
+        if summary := _stats_summary(d):
+            print(summary)
         for row in d[:20]:
             print(json.dumps(readable_dates(row)))
         if len(d) > 20:
