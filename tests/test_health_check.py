@@ -98,6 +98,7 @@ class HealthCheckTests(unittest.TestCase):
 
         self.assertEqual(result.status, 404)
         self.assertEqual(result.body, b"branded missing page")
+        self.assertTrue(error.fp.closed)
 
     def test_health_matrix_includes_every_sitemap_url(self):
         canonical_urls = [

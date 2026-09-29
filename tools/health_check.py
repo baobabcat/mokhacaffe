@@ -68,7 +68,10 @@ def fetch(url, opener=urllib.request.urlopen):
                 response.geturl(),
             )
     except urllib.error.HTTPError as error:
-        return Response(error.code, error.headers, error.read(), error.geturl())
+        try:
+            return Response(error.code, error.headers, error.read(), error.geturl())
+        finally:
+            error.close()
 
 
 def validate_home(response):

@@ -82,7 +82,10 @@ def call(method: str, params: dict | None = None, body: dict | None = None) -> d
                 payload = resp.read().decode()
             break
         except urllib.error.HTTPError as e:
-            raw_detail = e.read().decode(errors="replace")
+            try:
+                raw_detail = e.read().decode(errors="replace")
+            finally:
+                e.close()
             detail = raw_detail[:300]
             if e.code in (401, 403) or "InvalidApiKey" in raw_detail:
                 sys.exit(f"error: HTTP {e.code} — API key invalid or not authorized for this site.")

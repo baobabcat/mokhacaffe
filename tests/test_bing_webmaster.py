@@ -84,6 +84,7 @@ class BingWebmasterOutputTests(unittest.TestCase):
         self.assertEqual(result["d"]["Url"], bing_webmaster.SITE)
         self.assertEqual(urlopen.call_count, 2)
         sleep.assert_called_once_with(2)
+        self.assertTrue(throttle.fp.closed)
 
     def test_call_does_not_retry_non_400_with_throttle_marker(self):
         error = urllib.error.HTTPError(
