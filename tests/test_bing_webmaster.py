@@ -75,6 +75,31 @@ class BingWebmasterOutputTests(unittest.TestCase):
         )
         self.assertIn("... 1 more", report)
 
+    def test_query_stats_summary_weights_position_by_impressions(self):
+        rows = [
+            {
+                "Date": "/Date(1788220800000)/",
+                "Clicks": 0,
+                "Impressions": 4,
+                "AvgImpressionPosition": 2,
+                "Query": "moka pot",
+            },
+            {
+                "Date": "/Date(1788220800000)/",
+                "Clicks": 0,
+                "Impressions": 1,
+                "AvgImpressionPosition": 8,
+                "Query": "mokha coffee",
+            },
+        ]
+
+        with patch.object(bing_webmaster, "call", return_value={"d": rows}):
+            output = io.StringIO()
+            with redirect_stdout(output):
+                bing_webmaster._stats("GetQueryStats")
+
+        self.assertIn("impression-weighted position 3.2", output.getvalue())
+
     def test_url_info_prints_missing_date_sentinel_as_an_iso_date(self):
         payload = {
             "d": {

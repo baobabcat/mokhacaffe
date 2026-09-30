@@ -185,9 +185,17 @@ def _stats_summary(rows):
     impressions = sum(row["Impressions"] for row in rows)
     click_label = "click" if clicks == 1 else "clicks"
     impression_label = "impression" if impressions == 1 else "impressions"
+    position = ""
+    if impressions > 0 and all(
+        isinstance(row.get("AvgImpressionPosition"), (int, float)) for row in rows
+    ):
+        weighted_position = sum(
+            row["AvgImpressionPosition"] * row["Impressions"] for row in rows
+        ) / impressions
+        position = f", impression-weighted position {weighted_position:.1f}"
     return (
         f"summary: {len(rows)} rows, {impressions:g} {impression_label}, "
-        f"{clicks:g} {click_label}, {dates[0]} to {dates[-1]}"
+        f"{clicks:g} {click_label}{position}, {dates[0]} to {dates[-1]}"
     )
 
 
