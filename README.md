@@ -55,8 +55,11 @@ Cloudflare Workers Static Assets, served by a tiny Worker that 301s www → apex
   slice remains capped.)
 - `tools/indexnow_ping.py` — submits sitemap URLs to IndexNow (Bing/Yandex)
 - `tools/bing_webmaster.py` — Bing Webmaster API client (URL submission via
-  SubmitUrlBatch + verifiable index/crawl/query stats). Reads the configured
-  `BING_WEBMASTER_API_KEY` environment variable; the key is never committed.
+  SubmitUrlBatch + verifiable index/crawl/query stats). Its `search-summary`
+  command reconciles aggregate search impressions with the query and page detail
+  reports so omitted rows are not mistaken for a complete result set. It reads
+  the configured `BING_WEBMASTER_API_KEY` environment variable; the key is never
+  committed.
 - `tools/gen_feed.py` — regenerates `public/feed.xml` (Atom) from the journal index
   and each article's JSON-LD publication and modification dates; the feed is linked
   in every page footer so readers can follow new or revised guides without giving

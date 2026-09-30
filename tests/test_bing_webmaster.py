@@ -100,6 +100,49 @@ class BingWebmasterOutputTests(unittest.TestCase):
 
         self.assertIn("impression-weighted position 3.2", output.getvalue())
 
+    def test_search_summary_reconciles_aggregate_and_visible_impressions(self):
+        aggregate_rows = [
+            {"Date": "/Date(1788220800000)/", "Clicks": 0, "Impressions": 6}
+        ]
+        query_rows = [
+            {
+                "Date": "/Date(1788220800000)/",
+                "Clicks": 0,
+                "Impressions": 5,
+                "AvgImpressionPosition": 4.6,
+                "Query": "moka pot",
+            }
+        ]
+        page_rows = [
+            {
+                "Date": "/Date(1788220800000)/",
+                "Clicks": 0,
+                "Impressions": 5,
+                "AvgImpressionPosition": 4.6,
+                "Query": "https://mokhacaffe.com/journal/moka-pot-properly/",
+            }
+        ]
+        payloads = {
+            "GetRankAndTrafficStats": {"d": aggregate_rows},
+            "GetQueryStats": {"d": query_rows},
+            "GetPageStats": {"d": page_rows},
+        }
+
+        with patch.object(
+            bing_webmaster, "call", side_effect=lambda method, _params: payloads[method]
+        ):
+            output = io.StringIO()
+            with redirect_stdout(output):
+                bing_webmaster.cmd_search_summary(None)
+
+        report = output.getvalue()
+        self.assertIn("aggregate: 6 impressions, 0 clicks", report)
+        self.assertIn("visible queries: 5 impressions (83.3% of aggregate)", report)
+        self.assertIn("visible pages: 5 impressions (83.3% of aggregate)", report)
+        self.assertIn("omitted from query details: 1 impression", report)
+        self.assertIn("omitted from page details: 1 impression", report)
+        self.assertIn("visible impression-weighted position: 4.6", report)
+
     def test_url_info_prints_missing_date_sentinel_as_an_iso_date(self):
         payload = {
             "d": {

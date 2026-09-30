@@ -27,6 +27,7 @@ Usage:
   python3 tools/bing_webmaster.py quota                 # URL-submission quota left today
   python3 tools/bing_webmaster.py submit [--sitemap] [URL ...]
   python3 tools/bing_webmaster.py urlinfo <URL>
+  python3 tools/bing_webmaster.py search-summary
   python3 tools/bing_webmaster.py crawl-stats|query-stats|page-stats|rank-traffic
 
 Exit codes: 0 success, 1 API/transport error, 2 usage/config error.
@@ -199,6 +200,65 @@ def _stats_summary(rows):
     )
 
 
+def _stats_totals(rows):
+    if not isinstance(rows, list) or not all(
+        isinstance(row, dict)
+        and isinstance(row.get("Clicks"), (int, float))
+        and isinstance(row.get("Impressions"), (int, float))
+        for row in rows
+    ):
+        sys.exit("error: Bing returned an invalid search-stat response.")
+    return (
+        sum(row["Clicks"] for row in rows),
+        sum(row["Impressions"] for row in rows),
+    )
+
+
+def cmd_search_summary(_):
+    reports = {
+        method: call(method, {"siteUrl": SITE}).get("d", [])
+        for method in (
+            "GetRankAndTrafficStats",
+            "GetQueryStats",
+            "GetPageStats",
+        )
+    }
+    aggregate_clicks, aggregate_impressions = _stats_totals(
+        reports["GetRankAndTrafficStats"]
+    )
+    query_clicks, query_impressions = _stats_totals(reports["GetQueryStats"])
+    page_clicks, page_impressions = _stats_totals(reports["GetPageStats"])
+
+    def detail_line(label, clicks, impressions):
+        coverage = (
+            f" ({impressions / aggregate_impressions:.1%} of aggregate)"
+            if aggregate_impressions
+            else ""
+        )
+        return f"{label}: {impressions:g} impressions{coverage}, {clicks:g} clicks"
+
+    print(f"aggregate: {aggregate_impressions:g} impressions, {aggregate_clicks:g} clicks")
+    print(detail_line("visible queries", query_clicks, query_impressions))
+    print(detail_line("visible pages", page_clicks, page_impressions))
+    for label, impressions in (
+        ("query", query_impressions),
+        ("page", page_impressions),
+    ):
+        omitted = max(0, aggregate_impressions - impressions)
+        noun = "impression" if omitted == 1 else "impressions"
+        print(f"omitted from {label} details: {omitted:g} {noun}")
+
+    query_rows = reports["GetQueryStats"]
+    if query_impressions and all(
+        isinstance(row.get("AvgImpressionPosition"), (int, float))
+        for row in query_rows
+    ):
+        position = sum(
+            row["AvgImpressionPosition"] * row["Impressions"] for row in query_rows
+        ) / query_impressions
+        print(f"visible impression-weighted position: {position:.1f}")
+
+
 def _stats(method):
     d = call(method, {"siteUrl": SITE}).get("d", [])
     if isinstance(d, list):
@@ -224,6 +284,10 @@ def main():
     sp.add_argument("--dry-run", action="store_true")
     sp = sub.add_parser("urlinfo", help="Bing's stored info for one URL")
     sp.add_argument("url")
+    sub.add_parser(
+        "search-summary",
+        help="reconcile aggregate, query, and page search totals",
+    )
     for name, method in [
         ("crawl-stats", "GetCrawlStats"),
         ("query-stats", "GetQueryStats"),
@@ -233,7 +297,13 @@ def main():
         p = sub.add_parser(name, help=method)
         p.set_defaults(_method=method)
     args = ap.parse_args()
-    dispatch = {"sites": cmd_sites, "quota": cmd_quota, "submit": cmd_submit, "urlinfo": cmd_urlinfo}
+    dispatch = {
+        "sites": cmd_sites,
+        "quota": cmd_quota,
+        "submit": cmd_submit,
+        "urlinfo": cmd_urlinfo,
+        "search-summary": cmd_search_summary,
+    }
     if args.cmd in dispatch:
         dispatch[args.cmd](args)
     else:
