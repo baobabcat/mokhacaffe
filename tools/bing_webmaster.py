@@ -165,6 +165,18 @@ def cmd_urlinfo(args):
     print(json.dumps(readable_dates(d), indent=2))
 
 
+def _stats_date_range(rows):
+    dates = sorted(
+        converted
+        for row in rows
+        if isinstance((converted := readable_dates(row.get("Date"))), str)
+        and converted != row.get("Date")
+    )
+    if not dates:
+        return None
+    return dates[0], dates[-1]
+
+
 def _stats_summary(rows):
     """Summarize every dated click/impression row returned by Bing."""
     if not rows or not all(
@@ -174,13 +186,8 @@ def _stats_summary(rows):
         for row in rows
     ):
         return None
-    dates = sorted(
-        converted
-        for row in rows
-        if isinstance((converted := readable_dates(row.get("Date"))), str)
-        and converted != row.get("Date")
-    )
-    if not dates:
+    date_range = _stats_date_range(rows)
+    if not date_range:
         return None
     clicks = sum(row["Clicks"] for row in rows)
     impressions = sum(row["Impressions"] for row in rows)
@@ -196,7 +203,7 @@ def _stats_summary(rows):
         position = f", impression-weighted position {weighted_position:.1f}"
     return (
         f"summary: {len(rows)} rows, {impressions:g} {impression_label}, "
-        f"{clicks:g} {click_label}{position}, {dates[0]} to {dates[-1]}"
+        f"{clicks:g} {click_label}{position}, {date_range[0]} to {date_range[1]}"
     )
 
 
@@ -238,6 +245,13 @@ def cmd_search_summary(_):
         return f"{label}: {impressions:g} impressions{coverage}, {clicks:g} clicks"
 
     print(f"aggregate: {aggregate_impressions:g} impressions, {aggregate_clicks:g} clicks")
+    for label, method in (
+        ("aggregate", "GetRankAndTrafficStats"),
+        ("visible query", "GetQueryStats"),
+        ("visible page", "GetPageStats"),
+    ):
+        if date_range := _stats_date_range(reports[method]):
+            print(f"{label} window: {date_range[0]} to {date_range[1]}")
     print(detail_line("visible queries", query_clicks, query_impressions))
     print(detail_line("visible pages", page_clicks, page_impressions))
     for label, impressions in (

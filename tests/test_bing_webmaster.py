@@ -102,7 +102,8 @@ class BingWebmasterOutputTests(unittest.TestCase):
 
     def test_search_summary_reconciles_aggregate_and_visible_impressions(self):
         aggregate_rows = [
-            {"Date": "/Date(1788220800000)/", "Clicks": 0, "Impressions": 6}
+            {"Date": "/Date(1788220800000)/", "Clicks": 0, "Impressions": 5},
+            {"Date": "/Date(1788393600000)/", "Clicks": 0, "Impressions": 1},
         ]
         query_rows = [
             {
@@ -137,6 +138,18 @@ class BingWebmasterOutputTests(unittest.TestCase):
 
         report = output.getvalue()
         self.assertIn("aggregate: 6 impressions, 0 clicks", report)
+        self.assertIn(
+            "aggregate window: 2026-09-01T00:00:00Z to 2026-09-03T00:00:00Z",
+            report,
+        )
+        self.assertIn(
+            "visible query window: 2026-09-01T00:00:00Z to 2026-09-01T00:00:00Z",
+            report,
+        )
+        self.assertIn(
+            "visible page window: 2026-09-01T00:00:00Z to 2026-09-01T00:00:00Z",
+            report,
+        )
         self.assertIn("visible queries: 5 impressions (83.3% of aggregate)", report)
         self.assertIn("visible pages: 5 impressions (83.3% of aggregate)", report)
         self.assertIn("omitted from query details: 1 impression", report)
