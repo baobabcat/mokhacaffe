@@ -384,16 +384,46 @@ def run_complete_window(token, since, until, fetch=run):
         )
 
 
+def resolve_window(hours, since=None, until=None, now=None):
+    """Return UTC bounds and a stable label for rolling or fixed reports."""
+    if bool(since) != bool(until):
+        raise ValueError("--since and --until must be used together")
+    if since:
+        assert until is not None
+        start = datetime.fromisoformat(since.replace("Z", "+00:00"))
+        end = datetime.fromisoformat(until.replace("Z", "+00:00"))
+        if start.tzinfo is None or end.tzinfo is None:
+            raise ValueError("fixed boundaries must include a timezone")
+        start = start.astimezone(timezone.utc)
+        end = end.astimezone(timezone.utc)
+        if start >= end:
+            raise ValueError("--since must be before --until")
+        label = (
+            f"{start.strftime('%Y-%m-%dT%H:%M:%SZ')} to "
+            f"{end.strftime('%Y-%m-%dT%H:%M:%SZ')}"
+        )
+        return start, end, label
+    end = now or datetime.now(timezone.utc)
+    start = end - timedelta(hours=hours)
+    return start, end, f"last {hours}h (since {start.strftime('%Y-%m-%dT%H:%M:%SZ')})"
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--hours", type=int, default=168)
+    ap.add_argument("--since", help="fixed window start in UTC, for example 2026-10-02T04:00:00Z")
+    ap.add_argument("--until", help="fixed window end in UTC, for example 2026-10-02T06:00:00Z")
     args = ap.parse_args()
 
     token = os.environ.get("CLOUDFLARE_API_TOKEN")
     if not token:
         sys.exit("CLOUDFLARE_API_TOKEN not set")
-    now = datetime.now(timezone.utc)
-    start = now - timedelta(hours=args.hours)
+    try:
+        start, end, window_label = resolve_window(
+            args.hours, args.since, args.until
+        )
+    except ValueError as error:
+        ap.error(str(error))
 
     # Free-plan quota: httpRequestsAdaptiveGroups windows are capped at 1 day
     # (verified 2026-08-31, GraphQL 'quota' error) — query daily slices and
@@ -401,14 +431,13 @@ def main():
     # counted in both adjacent slices.
     rows = []
     cursor = start
-    while cursor < now:
-        nxt = min(cursor + timedelta(hours=24), now)
+    while cursor < end:
+        nxt = min(cursor + timedelta(hours=24), end)
         rows.extend(run_complete_window(token, cursor, nxt))
         cursor = nxt
     groups = merge_group_rows(rows)
     total = sum(g["count"] for g in groups)
-    print(f"# Edge requests, last {args.hours}h (since "
-          f"{start.strftime('%Y-%m-%dT%H:%M:%SZ')}) — zone mokhacaffe.com")
+    print(f"# Edge requests, {window_label} — zone mokhacaffe.com")
     print(f"total edge requests: {total}\n")
 
     print("## by path (top 25)")

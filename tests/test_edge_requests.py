@@ -334,6 +334,34 @@ class AcquisitionSummaryTests(unittest.TestCase):
         self.assertNotIn("datetime_leq", edge_requests.QUERY)
         self.assertNotIn("clientRefererHost", edge_requests.QUERY)
 
+    def test_fixed_window_parses_utc_boundaries(self):
+        start, end, label = edge_requests.resolve_window(
+            hours=7,
+            since="2026-10-02T04:00:00Z",
+            until="2026-10-02T06:00:00Z",
+            now=edge_requests.datetime(2026, 10, 3, tzinfo=edge_requests.timezone.utc),
+        )
+
+        self.assertEqual(start, edge_requests.datetime(2026, 10, 2, 4, tzinfo=edge_requests.timezone.utc))
+        self.assertEqual(end, edge_requests.datetime(2026, 10, 2, 6, tzinfo=edge_requests.timezone.utc))
+        self.assertEqual(label, "2026-10-02T04:00:00Z to 2026-10-02T06:00:00Z")
+
+    def test_fixed_window_requires_both_boundaries(self):
+        with self.assertRaisesRegex(ValueError, "must be used together"):
+            edge_requests.resolve_window(
+                hours=7,
+                since="2026-10-02T04:00:00Z",
+                until=None,
+            )
+
+    def test_fixed_window_requires_increasing_boundaries(self):
+        with self.assertRaisesRegex(ValueError, "must be before"):
+            edge_requests.resolve_window(
+                hours=7,
+                since="2026-10-02T06:00:00Z",
+                until="2026-10-02T04:00:00Z",
+            )
+
     def test_canonical_content_requests_exclude_assets_errors_and_unsafe_methods(self):
         groups = [
             group(4, "/"),

@@ -50,10 +50,11 @@ Cloudflare Workers Static Assets, served by a tiny Worker that 301s www → apex
   successful feed requests among named feed-reader signatures, site checks,
   crawlers, browsers, and unidentified clients. User-agent signatures are not
   treated as verified identities, and requests are not treated as subscriptions
-  or distinct readers; Free-plan windows are capped at one day, then sliced and
-  merged. Dense windows are bisected automatically when a grouped result reaches
-  Cloudflare's 500-row cap, and the report still fails closed if a one-minute
-  slice remains capped.)
+  subscriptions or distinct readers; Free-plan windows are capped at one day,
+  then sliced and merged. Dense windows are bisected automatically when a grouped
+  result reaches Cloudflare's 500-row cap, and the report still fails closed if a
+  one-minute slice remains capped. Use `--hours` for a rolling report or `--since`
+  with `--until` for a repeatable UTC interval.)
 - `tools/indexnow_ping.py` — submits sitemap URLs to IndexNow (Bing/Yandex)
 - `tools/bing_webmaster.py` — Bing Webmaster API client (URL submission via
   SubmitUrlBatch + verifiable index/crawl/query stats). Its `search-summary`
