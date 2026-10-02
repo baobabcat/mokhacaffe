@@ -12,6 +12,7 @@ end-to-end verified with two real browser visits appearing within ~5 min).
 Note: GraphQL siteTag is the internal site id, NOT the JS beacon token.
 
 Usage: python3 tools/rum_baseline.py [--hours 24] [--all-sites]
+       python3 tools/rum_baseline.py --since 2026-10-02T04:00:00Z --until 2026-10-02T06:00:00Z
 """
 import argparse
 import json
@@ -139,6 +140,8 @@ def format_referrers(groups):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--hours", type=int, default=24)
+    ap.add_argument("--since", help="fixed window start in UTC, for example 2026-10-02T04:00:00Z")
+    ap.add_argument("--until", help="fixed window end in UTC, for example 2026-10-02T06:00:00Z")
     ap.add_argument("--all-sites", action="store_true",
                     help="include historical/stray site tags")
     args = ap.parse_args()
@@ -146,9 +149,15 @@ def main():
     token = os.environ.get("CLOUDFLARE_API_TOKEN")
     if not token:
         sys.exit("CLOUDFLARE_API_TOKEN not set")
-    now = datetime.now(timezone.utc)
-    since = (now - timedelta(hours=args.hours)).strftime("%Y-%m-%dT%H:%M:%SZ")
-    until = now.strftime("%Y-%m-%dT%H:%M:%SZ")
+    if bool(args.since) != bool(args.until):
+        ap.error("--since and --until must be used together")
+    if args.since:
+        since = args.since
+        until = args.until
+    else:
+        now = datetime.now(timezone.utc)
+        since = (now - timedelta(hours=args.hours)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        until = now.strftime("%Y-%m-%dT%H:%M:%SZ")
     body = json.dumps({"query": QUERY,
                        "variables": {
                            "acct": ACCT,
@@ -167,7 +176,7 @@ def main():
     guard_truncation("pathGroups", path_groups)
     guard_truncation("referrerGroups", referrer_groups)
 
-    print(f"# RUM pageloads, last {args.hours}h ({since} to {until})")
+    print(f"# RUM pageloads ({since} to {until})")
     for g in sorted(path_groups, key=lambda x: -x["count"]):
         d = g.get("dimensions")
         if not isinstance(d, dict):

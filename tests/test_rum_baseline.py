@@ -116,6 +116,50 @@ class RumReferralTests(unittest.TestCase):
         self.assertRegex(variables["until"], r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
         self.assertLess(variables["since"], variables["until"])
 
+    def test_main_uses_an_explicit_utc_window(self):
+        response = {
+            "data": {
+                "viewer": {
+                    "accounts": [{"pathGroups": [], "referrerGroups": []}]
+                }
+            }
+        }
+        captured = {}
+
+        def open_request(request, timeout):
+            captured.update(json.loads(request.data))
+            return io.BytesIO(json.dumps(response).encode())
+
+        stdout = io.StringIO()
+        with (
+            mock.patch.dict(os.environ, {"CLOUDFLARE_API_TOKEN": "test-token"}),
+            mock.patch.object(
+                sys,
+                "argv",
+                [
+                    "rum_baseline.py",
+                    "--since",
+                    "2026-10-02T04:00:00Z",
+                    "--until",
+                    "2026-10-02T06:00:00Z",
+                ],
+            ),
+            mock.patch.object(
+                rum_baseline.urllib.request,
+                "urlopen",
+                side_effect=open_request,
+            ),
+            contextlib.redirect_stdout(stdout),
+        ):
+            rum_baseline.main()
+
+        self.assertEqual(captured["variables"]["since"], "2026-10-02T04:00:00Z")
+        self.assertEqual(captured["variables"]["until"], "2026-10-02T06:00:00Z")
+        self.assertIn(
+            "2026-10-02T04:00:00Z to 2026-10-02T06:00:00Z",
+            stdout.getvalue(),
+        )
+
     def test_main_uses_path_groups_without_referrer_fragmentation(self):
         response = {
             "data": {

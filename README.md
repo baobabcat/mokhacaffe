@@ -30,7 +30,8 @@ Cloudflare Workers Static Assets, served by a tiny Worker that 301s www → apex
   mokhacaffe.com subdomain from its referrer summary, maps external referrers to
   canonical landing paths, uses one fixed half-open time window for both GraphQL
   groupings, aborts rather than report potentially truncated groups, and never
-  queries visitor IPs.
+  queries visitor IPs. Use `--hours` for a rolling lookback or `--since` with
+  `--until` for a repeatable UTC interval.
 - Google Analytics 4 measurement `G-HJNKHJZZLL` is installed on every HTML page.
   The CSP permits only the required Google tag and analytics origins and
   authorizes the inline initializer by SHA-256 rather than `'unsafe-inline'`.
