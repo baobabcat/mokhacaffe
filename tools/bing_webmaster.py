@@ -177,6 +177,17 @@ def _stats_date_range(rows):
     return dates[0], dates[-1]
 
 
+def _stats_lag_days(reference_rows, detail_rows):
+    """Return how many whole days the detail report trails the reference report."""
+    reference_range = _stats_date_range(reference_rows)
+    detail_range = _stats_date_range(detail_rows)
+    if not reference_range or not detail_range:
+        return None
+    reference_end = datetime.fromisoformat(reference_range[1].replace("Z", "+00:00"))
+    detail_end = datetime.fromisoformat(detail_range[1].replace("Z", "+00:00"))
+    return (reference_end - detail_end).days
+
+
 def _stats_summary(rows):
     """Summarize every dated click/impression row returned by Bing."""
     if not rows or not all(
@@ -261,6 +272,17 @@ def cmd_search_summary(_):
         omitted = max(0, aggregate_impressions - impressions)
         noun = "impression" if omitted == 1 else "impressions"
         print(f"omitted from {label} details: {omitted:g} {noun}")
+
+    for label, method in (
+        ("query", "GetQueryStats"),
+        ("page", "GetPageStats"),
+    ):
+        lag_days = _stats_lag_days(reports["GetRankAndTrafficStats"], reports[method])
+        if lag_days is not None:
+            if lag_days >= 0:
+                print(f"visible {label} lag: {lag_days} days behind aggregate")
+            else:
+                print(f"visible {label} lag: {-lag_days} days ahead of aggregate")
 
     query_rows = reports["GetQueryStats"]
     if query_impressions and all(

@@ -154,7 +154,46 @@ class BingWebmasterOutputTests(unittest.TestCase):
         self.assertIn("visible pages: 5 impressions (83.3% of aggregate)", report)
         self.assertIn("omitted from query details: 1 impression", report)
         self.assertIn("omitted from page details: 1 impression", report)
+        self.assertIn("visible query lag: 2 days behind aggregate", report)
+        self.assertIn("visible page lag: 2 days behind aggregate", report)
         self.assertIn("visible impression-weighted position: 4.6", report)
+
+    def test_search_summary_reports_different_detail_lags(self):
+        aggregate_rows = [
+            {"Date": "/Date(1788393600000)/", "Clicks": 0, "Impressions": 7},
+        ]
+        query_rows = [
+            {
+                "Date": "/Date(1788393600000)/",
+                "Clicks": 0,
+                "Impressions": 6,
+                "AvgImpressionPosition": 4.5,
+            }
+        ]
+        page_rows = [
+            {
+                "Date": "/Date(1787788800000)/",
+                "Clicks": 0,
+                "Impressions": 5,
+                "AvgImpressionPosition": 4.6,
+            }
+        ]
+        payloads = {
+            "GetRankAndTrafficStats": {"d": aggregate_rows},
+            "GetQueryStats": {"d": query_rows},
+            "GetPageStats": {"d": page_rows},
+        }
+
+        with patch.object(
+            bing_webmaster, "call", side_effect=lambda method, _params: payloads[method]
+        ):
+            output = io.StringIO()
+            with redirect_stdout(output):
+                bing_webmaster.cmd_search_summary(None)
+
+        report = output.getvalue()
+        self.assertIn("visible query lag: 0 days behind aggregate", report)
+        self.assertIn("visible page lag: 7 days behind aggregate", report)
 
     def test_url_info_prints_missing_date_sentinel_as_an_iso_date(self):
         payload = {
