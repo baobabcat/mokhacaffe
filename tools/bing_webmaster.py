@@ -265,13 +265,18 @@ def cmd_search_summary(_):
             print(f"{label} window: {date_range[0]} to {date_range[1]}")
     print(detail_line("visible queries", query_clicks, query_impressions))
     print(detail_line("visible pages", page_clicks, page_impressions))
-    for label, impressions in (
-        ("query", query_impressions),
-        ("page", page_impressions),
+    for label, impressions, clicks in (
+        ("query", query_impressions, query_clicks),
+        ("page", page_impressions, page_clicks),
     ):
-        omitted = max(0, aggregate_impressions - impressions)
-        noun = "impression" if omitted == 1 else "impressions"
-        print(f"omitted from {label} details: {omitted:g} {noun}")
+        omitted_impressions = max(0, aggregate_impressions - impressions)
+        omitted_clicks = max(0, aggregate_clicks - clicks)
+        impression_noun = "impression" if omitted_impressions == 1 else "impressions"
+        click_noun = "click" if omitted_clicks == 1 else "clicks"
+        print(
+            f"omitted from {label} details: {omitted_impressions:g} "
+            f"{impression_noun}, {omitted_clicks:g} {click_noun}"
+        )
 
     for label, method in (
         ("query", "GetQueryStats"),

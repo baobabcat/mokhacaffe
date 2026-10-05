@@ -158,6 +158,35 @@ class BingWebmasterOutputTests(unittest.TestCase):
         self.assertIn("visible page lag: 2 days behind aggregate", report)
         self.assertIn("visible impression-weighted position: 4.6", report)
 
+    def test_search_summary_reports_clicks_omitted_from_detail_reports(self):
+        aggregate_rows = [
+            {"Date": "/Date(1788393600000)/", "Clicks": 1, "Impressions": 4},
+        ]
+        query_rows = [
+            {
+                "Date": "/Date(1788307200000)/",
+                "Clicks": 0,
+                "Impressions": 1,
+                "AvgImpressionPosition": 4,
+            }
+        ]
+        payloads = {
+            "GetRankAndTrafficStats": {"d": aggregate_rows},
+            "GetQueryStats": {"d": query_rows},
+            "GetPageStats": {"d": query_rows},
+        }
+
+        with patch.object(
+            bing_webmaster, "call", side_effect=lambda method, _params: payloads[method]
+        ):
+            output = io.StringIO()
+            with redirect_stdout(output):
+                bing_webmaster.cmd_search_summary(None)
+
+        report = output.getvalue()
+        self.assertIn("omitted from query details: 3 impressions, 1 click", report)
+        self.assertIn("omitted from page details: 3 impressions, 1 click", report)
+
     def test_search_summary_reports_different_detail_lags(self):
         aggregate_rows = [
             {"Date": "/Date(1788393600000)/", "Clicks": 0, "Impressions": 7},
