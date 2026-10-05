@@ -187,6 +187,77 @@ class BingWebmasterOutputTests(unittest.TestCase):
         self.assertIn("omitted from query details: 3 impressions, 1 click", report)
         self.assertIn("omitted from page details: 3 impressions, 1 click", report)
 
+    def test_search_summary_separates_delayed_window_from_overlapping_omissions(self):
+        aggregate_rows = [
+            {"Date": "/Date(1790899200000)/", "Clicks": 0, "Impressions": 7},
+            {"Date": "/Date(1790985600000)/", "Clicks": 1, "Impressions": 4},
+        ]
+        detail_rows = [
+            {
+                "Date": "/Date(1790899200000)/",
+                "Clicks": 0,
+                "Impressions": 6,
+                "AvgImpressionPosition": 4.5,
+            }
+        ]
+        payloads = {
+            "GetRankAndTrafficStats": {"d": aggregate_rows},
+            "GetQueryStats": {"d": detail_rows},
+            "GetPageStats": {"d": detail_rows},
+        }
+
+        with patch.object(
+            bing_webmaster, "call", side_effect=lambda method, _params: payloads[method]
+        ):
+            output = io.StringIO()
+            with redirect_stdout(output):
+                bing_webmaster.cmd_search_summary(None)
+
+        report = output.getvalue()
+        self.assertIn(
+            "aggregate after visible query window: 4 impressions, 1 click", report
+        )
+        self.assertIn(
+            "omitted within overlapping query window: 1 impression, 0 clicks", report
+        )
+        self.assertIn(
+            "aggregate after visible page window: 4 impressions, 1 click", report
+        )
+        self.assertIn(
+            "omitted within overlapping page window: 1 impression, 0 clicks", report
+        )
+
+    def test_search_summary_uses_singular_labels_for_one_click_and_one_day(self):
+        aggregate_rows = [
+            {"Date": "/Date(1790985600000)/", "Clicks": 1, "Impressions": 4},
+        ]
+        detail_rows = [
+            {
+                "Date": "/Date(1790899200000)/",
+                "Clicks": 0,
+                "Impressions": 3,
+                "AvgImpressionPosition": 4.5,
+            }
+        ]
+        payloads = {
+            "GetRankAndTrafficStats": {"d": aggregate_rows},
+            "GetQueryStats": {"d": detail_rows},
+            "GetPageStats": {"d": detail_rows},
+        }
+
+        with patch.object(
+            bing_webmaster, "call", side_effect=lambda method, _params: payloads[method]
+        ):
+            output = io.StringIO()
+            with redirect_stdout(output):
+                bing_webmaster.cmd_search_summary(None)
+
+        report = output.getvalue()
+        self.assertIn("aggregate: 4 impressions, 1 click\n", report)
+        self.assertIn("visible query lag: 1 day behind aggregate", report)
+        self.assertNotIn("1 clicks", report)
+        self.assertNotIn("1 days", report)
+
     def test_search_summary_reports_different_detail_lags(self):
         aggregate_rows = [
             {"Date": "/Date(1788393600000)/", "Clicks": 0, "Impressions": 7},

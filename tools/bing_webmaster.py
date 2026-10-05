@@ -255,7 +255,14 @@ def cmd_search_summary(_):
         )
         return f"{label}: {impressions:g} impressions{coverage}, {clicks:g} clicks"
 
-    print(f"aggregate: {aggregate_impressions:g} impressions, {aggregate_clicks:g} clicks")
+    aggregate_click_noun = "click" if aggregate_clicks == 1 else "clicks"
+    aggregate_impression_noun = (
+        "impression" if aggregate_impressions == 1 else "impressions"
+    )
+    print(
+        f"aggregate: {aggregate_impressions:g} {aggregate_impression_noun}, "
+        f"{aggregate_clicks:g} {aggregate_click_noun}"
+    )
     for label, method in (
         ("aggregate", "GetRankAndTrafficStats"),
         ("visible query", "GetQueryStats"),
@@ -265,9 +272,9 @@ def cmd_search_summary(_):
             print(f"{label} window: {date_range[0]} to {date_range[1]}")
     print(detail_line("visible queries", query_clicks, query_impressions))
     print(detail_line("visible pages", page_clicks, page_impressions))
-    for label, impressions, clicks in (
-        ("query", query_impressions, query_clicks),
-        ("page", page_impressions, page_clicks),
+    for label, impressions, clicks, method in (
+        ("query", query_impressions, query_clicks, "GetQueryStats"),
+        ("page", page_impressions, page_clicks, "GetPageStats"),
     ):
         omitted_impressions = max(0, aggregate_impressions - impressions)
         omitted_clicks = max(0, aggregate_clicks - clicks)
@@ -277,6 +284,34 @@ def cmd_search_summary(_):
             f"omitted from {label} details: {omitted_impressions:g} "
             f"{impression_noun}, {omitted_clicks:g} {click_noun}"
         )
+        detail_range = _stats_date_range(reports[method])
+        if detail_range:
+            aggregate_after = [
+                row
+                for row in reports["GetRankAndTrafficStats"]
+                if isinstance((date := readable_dates(row.get("Date"))), str)
+                and date != row.get("Date")
+                and date > detail_range[1]
+            ]
+            after_clicks, after_impressions = _stats_totals(aggregate_after)
+            after_impression_noun = (
+                "impression" if after_impressions == 1 else "impressions"
+            )
+            after_click_noun = "click" if after_clicks == 1 else "clicks"
+            print(
+                f"aggregate after visible {label} window: {after_impressions:g} "
+                f"{after_impression_noun}, {after_clicks:g} {after_click_noun}"
+            )
+            overlap_impressions = max(0, omitted_impressions - after_impressions)
+            overlap_clicks = max(0, omitted_clicks - after_clicks)
+            overlap_impression_noun = (
+                "impression" if overlap_impressions == 1 else "impressions"
+            )
+            overlap_click_noun = "click" if overlap_clicks == 1 else "clicks"
+            print(
+                f"omitted within overlapping {label} window: {overlap_impressions:g} "
+                f"{overlap_impression_noun}, {overlap_clicks:g} {overlap_click_noun}"
+            )
 
     for label, method in (
         ("query", "GetQueryStats"),
@@ -284,10 +319,11 @@ def cmd_search_summary(_):
     ):
         lag_days = _stats_lag_days(reports["GetRankAndTrafficStats"], reports[method])
         if lag_days is not None:
+            day_noun = "day" if abs(lag_days) == 1 else "days"
             if lag_days >= 0:
-                print(f"visible {label} lag: {lag_days} days behind aggregate")
+                print(f"visible {label} lag: {lag_days} {day_noun} behind aggregate")
             else:
-                print(f"visible {label} lag: {-lag_days} days ahead of aggregate")
+                print(f"visible {label} lag: {-lag_days} {day_noun} ahead of aggregate")
 
     query_rows = reports["GetQueryStats"]
     if query_impressions and all(
