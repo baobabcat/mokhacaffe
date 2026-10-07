@@ -94,6 +94,52 @@ class AcquisitionSummaryTests(unittest.TestCase):
         self.assertNotIn("spam.example", report)
         self.assertNotIn("external referrers", report)
 
+    def test_deployable_public_paths_combine_canonicals_and_static_files(self):
+        with tempfile.TemporaryDirectory() as directory:
+            public = Path(directory)
+            (public / "index.html").write_text("home", encoding="utf-8")
+            (public / "404.html").write_text("missing", encoding="utf-8")
+            (public / "guide").mkdir()
+            (public / "guide" / "index.html").write_text("guide", encoding="utf-8")
+            (public / "assets").mkdir()
+            (public / "assets" / "site.css").write_text("css", encoding="utf-8")
+
+            paths = edge_requests.deployable_public_paths(
+                public,
+                canonical_paths={"/", "/guide/"},
+            )
+
+        self.assertEqual(
+            paths,
+            {"/", "/guide/", "/404.html", "/assets/site.css"},
+        )
+
+    def test_published_paths_allow_cloudflare_trace_endpoint(self):
+        self.assertIn("/cdn-cgi/trace", edge_requests.PUBLISHED_PATHS)
+
+    def test_unexpected_success_report_flags_only_unpublished_get_head_paths(self):
+        groups = [
+            group(4, "/"),
+            group(3, "/assets/styles.css"),
+            group(2, "/wp-login.php"),
+            group(5, "/shell.php", method="HEAD"),
+            group(7, "/missing.php", status=404),
+            group(11, "/post-target", method="POST"),
+        ]
+
+        report = edge_requests.format_unexpected_successes(
+            groups,
+            expected_paths={"/", "/assets/styles.css"},
+        )
+
+        self.assertIn("unexpected successful paths: 7", report)
+        self.assertIn("     5  /shell.php", report)
+        self.assertIn("     2  /wp-login.php", report)
+        self.assertNotIn("/assets/styles.css", report)
+        self.assertNotIn("/missing.php", report)
+        self.assertNotIn("/post-target", report)
+        self.assertIn("investigate any listed path", report)
+
     def test_acquisition_report_shows_calculator_as_canonical_content(self):
         groups = [group(2, "/coffee-ratio-calculator/")]
 

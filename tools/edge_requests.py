@@ -77,7 +77,19 @@ def sitemap_canonical_paths(path=SITEMAP):
     return paths
 
 
+def deployable_public_paths(public_root, canonical_paths):
+    """Return canonical pages and directly served non-index static files."""
+    paths = set(canonical_paths)
+    for file_path in public_root.rglob("*"):
+        if file_path.is_file() and file_path.name != "index.html":
+            paths.add("/" + file_path.relative_to(public_root).as_posix())
+    return paths
+
+
 CANONICAL_CONTENT_PATHS = sitemap_canonical_paths()
+PUBLISHED_PATHS = deployable_public_paths(ROOT / "public", CANONICAL_CONTENT_PATHS) | {
+    "/cdn-cgi/trace",
+}
 
 
 def merge_group_rows(rows):
@@ -100,6 +112,34 @@ def merge_group_rows(rows):
         }
         for key, count in merged.items()
     ]
+
+
+def format_unexpected_successes(groups, expected_paths):
+    """List successful GET/HEAD paths outside the published static surface."""
+    unexpected = {}
+    for group in groups:
+        dimensions = group["dimensions"]
+        path = dimensions.get("clientRequestPath") or "/"
+        if (
+            path not in expected_paths
+            and dimensions.get("edgeResponseStatus") == 200
+            and dimensions.get("clientRequestHTTPMethodName") in ("GET", "HEAD")
+        ):
+            unexpected[path] = unexpected.get(path, 0) + group["count"]
+
+    lines = [
+        "## unexpected successful paths",
+        f"unexpected successful paths: {sum(unexpected.values())}",
+    ]
+    if unexpected:
+        for path, count in sorted(unexpected.items(), key=lambda item: (-item[1], item[0])):
+            lines.append(f"{count:>6}  {path}")
+    else:
+        lines.append("none observed")
+    lines.append(
+        "note: investigate any listed path; expected public and Cloudflare-managed paths are excluded."
+    )
+    return "\n".join(lines)
 
 
 def canonical_content_requests(groups):
@@ -456,6 +496,7 @@ def main():
     for s, c in sorted(by_status.items(), key=lambda x: -x[1]):
         print(f"{c:>6}  HTTP {s}")
 
+    print("\n" + format_unexpected_successes(groups, PUBLISHED_PATHS))
     print("\n" + format_acquisition(groups))
     print("\n" + format_search_crawler_coverage(groups))
     print("\n" + format_search_crawler_discovery_activity(groups))
