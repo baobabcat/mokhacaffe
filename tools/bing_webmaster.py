@@ -188,6 +188,37 @@ def _stats_lag_days(reference_rows, detail_rows):
     return (reference_end - detail_end).days
 
 
+def _crawl_stats_summary(rows):
+    """Summarize the full crawl window even when detailed output is truncated."""
+    if not rows or not all(
+        isinstance(row, dict)
+        and isinstance(row.get("CrawledPages"), (int, float))
+        and isinstance(row.get("CrawlErrors"), (int, float))
+        and isinstance(row.get("InIndex"), (int, float))
+        for row in rows
+    ):
+        return None
+    date_range = _stats_date_range(rows)
+    dated_rows = [
+        (converted, row)
+        for row in rows
+        if isinstance((converted := readable_dates(row.get("Date"))), str)
+        and converted != row.get("Date")
+    ]
+    if not date_range or not dated_rows:
+        return None
+    latest = max(dated_rows, key=lambda item: item[0])[1]
+    crawled = sum(row["CrawledPages"] for row in rows)
+    errors = sum(row["CrawlErrors"] for row in rows)
+    page_label = "page" if crawled == 1 else "pages"
+    error_label = "error" if errors == 1 else "errors"
+    return (
+        f"summary: {len(rows)} rows, {crawled:g} crawled {page_label}, "
+        f"{errors:g} crawl {error_label}, {date_range[0]} to {date_range[1]}; "
+        f"latest in index: {latest['InIndex']:g}"
+    )
+
+
 def _stats_summary(rows):
     """Summarize every dated click/impression row returned by Bing."""
     if not rows or not all(
@@ -340,7 +371,12 @@ def _stats(method):
     d = call(method, {"siteUrl": SITE}).get("d", [])
     if isinstance(d, list):
         print(f"{method}: {len(d)} rows")
-        if summary := _stats_summary(d):
+        summary = (
+            _crawl_stats_summary(d)
+            if method == "GetCrawlStats"
+            else _stats_summary(d)
+        )
+        if summary:
             print(summary)
         for row in d[:20]:
             print(json.dumps(readable_dates(row)))

@@ -38,6 +38,34 @@ class BingWebmasterOutputTests(unittest.TestCase):
         self.assertIn('"Date": "2026-09-01T00:00:00Z"', output.getvalue())
         self.assertNotIn("/Date(", output.getvalue())
 
+    def test_crawl_stats_summarizes_full_window_and_latest_snapshot(self):
+        rows = [
+            {
+                "Date": "/Date(1788220800000)/",
+                "CrawledPages": 4,
+                "CrawlErrors": 1,
+                "InIndex": 2,
+            },
+            {
+                "Date": "/Date(1790899200000)/",
+                "CrawledPages": 3,
+                "CrawlErrors": 0,
+                "InIndex": 5,
+            },
+        ]
+
+        with patch.object(bing_webmaster, "call", return_value={"d": rows}):
+            output = io.StringIO()
+            with redirect_stdout(output):
+                bing_webmaster._stats("GetCrawlStats")
+
+        self.assertIn(
+            "summary: 2 rows, 7 crawled pages, 1 crawl error, "
+            "2026-09-01T00:00:00Z to 2026-10-02T00:00:00Z; "
+            "latest in index: 5",
+            output.getvalue(),
+        )
+
     def test_query_stats_prints_totals_across_every_returned_row(self):
         rows = [
             {
