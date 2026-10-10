@@ -58,6 +58,26 @@ function loadLink(dataset) {
 }
 
 {
+  const state = loadLink({ analyticsEvent: 'grind_chart_open' });
+  let prevented = false;
+  state.handler({
+    button: 0,
+    metaKey: false,
+    ctrlKey: false,
+    shiftKey: false,
+    altKey: false,
+    preventDefault() { prevented = true; },
+  });
+  assert.equal(prevented, true);
+  assert.equal(state.calls[0][0], 'event');
+  assert.equal(state.calls[0][1], 'grind_chart_open');
+  assert.equal(typeof state.calls[0][2].event_callback, 'function');
+  assert.equal(state.calls[0][2].transport_type, 'beacon');
+  assert.deepEqual(Object.keys(state.calls[0][2]).sort(), ['event_callback', 'transport_type']);
+  assert.equal(state.timers[0].delay, 500);
+}
+
+{
   const state = loadLink({ analyticsEvent: 'contact_intent', inquiryType: 'wholesale' });
   state.handler({ button: 0, metaKey: false, ctrlKey: false, shiftKey: false, altKey: false });
   assert.equal(state.calls[0][0], 'event');
@@ -67,4 +87,4 @@ function loadLink(dataset) {
   assert.deepEqual(Object.keys(state.calls[0][2]).sort(), ['contact_method', 'inquiry_type']);
 }
 
-console.log('feed and contact analytics behavior passed');
+console.log('feed, chart, and contact analytics behavior passed');

@@ -3,7 +3,7 @@ document.querySelectorAll('[data-analytics-event]').forEach((link) => {
     if (typeof window.gtag !== 'function') return;
 
     const eventName = link.dataset.analyticsEvent;
-    if (eventName === 'feed_open') {
+    if (eventName === 'feed_open' || eventName === 'grind_chart_open') {
       const opensCurrentTab = clickEvent.button === 0
         && !clickEvent.metaKey
         && !clickEvent.ctrlKey
