@@ -284,7 +284,12 @@ def cmd_search_summary(_):
             if aggregate_impressions
             else ""
         )
-        return f"{label}: {impressions:g} impressions{coverage}, {clicks:g} clicks"
+        click_noun = "click" if clicks == 1 else "clicks"
+        impression_noun = "impression" if impressions == 1 else "impressions"
+        return (
+            f"{label}: {impressions:g} {impression_noun}{coverage}, "
+            f"{clicks:g} {click_noun}"
+        )
 
     aggregate_click_noun = "click" if aggregate_clicks == 1 else "clicks"
     aggregate_impression_noun = (
@@ -303,6 +308,22 @@ def cmd_search_summary(_):
             print(f"{label} window: {date_range[0]} to {date_range[1]}")
     print(detail_line("visible queries", query_clicks, query_impressions))
     print(detail_line("visible pages", page_clicks, page_impressions))
+    for label, method in (
+        ("query", "GetQueryStats"),
+        ("page", "GetPageStats"),
+    ):
+        for row in reports[method]:
+            if row["Clicks"] <= 0 or not isinstance(row.get("Query"), str):
+                continue
+            click_noun = "click" if row["Clicks"] == 1 else "clicks"
+            impression_noun = (
+                "impression" if row["Impressions"] == 1 else "impressions"
+            )
+            date = readable_dates(row.get("Date"))
+            print(
+                f"clicked {label}: {row['Clicks']:g} {click_noun}, "
+                f"{row['Impressions']:g} {impression_noun}, {date}, {row['Query']}"
+            )
     for label, impressions, clicks, method in (
         ("query", query_impressions, query_clicks, "GetQueryStats"),
         ("page", page_impressions, page_clicks, "GetPageStats"),

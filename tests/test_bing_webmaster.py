@@ -215,6 +215,53 @@ class BingWebmasterOutputTests(unittest.TestCase):
         self.assertIn("omitted from query details: 3 impressions, 1 click", report)
         self.assertIn("omitted from page details: 3 impressions, 1 click", report)
 
+    def test_search_summary_names_clicked_query_and_page_rows(self):
+        aggregate_rows = [
+            {"Date": "/Date(1791504000000)/", "Clicks": 1, "Impressions": 3},
+        ]
+        query_rows = [
+            {
+                "Date": "/Date(1791504000000)/",
+                "Clicks": 1,
+                "Impressions": 1,
+                "AvgImpressionPosition": 1,
+                "Query": "chart for multi size coffee brewer",
+            }
+        ]
+        page_rows = [
+            {
+                "Date": "/Date(1791504000000)/",
+                "Clicks": 1,
+                "Impressions": 3,
+                "AvgImpressionPosition": 4,
+                "Query": "https://mokhacaffe.com/coffee-grind-size-chart/",
+            }
+        ]
+        payloads = {
+            "GetRankAndTrafficStats": {"d": aggregate_rows},
+            "GetQueryStats": {"d": query_rows},
+            "GetPageStats": {"d": page_rows},
+        }
+
+        with patch.object(
+            bing_webmaster, "call", side_effect=lambda method, _params: payloads[method]
+        ):
+            output = io.StringIO()
+            with redirect_stdout(output):
+                bing_webmaster.cmd_search_summary(None)
+
+        report = output.getvalue()
+        self.assertIn(
+            "clicked query: 1 click, 1 impression, 2026-10-09T00:00:00Z, "
+            "chart for multi size coffee brewer",
+            report,
+        )
+        self.assertIn(
+            "clicked page: 1 click, 3 impressions, 2026-10-09T00:00:00Z, "
+            "https://mokhacaffe.com/coffee-grind-size-chart/",
+            report,
+        )
+
     def test_search_summary_separates_delayed_window_from_overlapping_omissions(self):
         aggregate_rows = [
             {"Date": "/Date(1790899200000)/", "Clicks": 0, "Impressions": 7},
@@ -262,7 +309,7 @@ class BingWebmasterOutputTests(unittest.TestCase):
         detail_rows = [
             {
                 "Date": "/Date(1790899200000)/",
-                "Clicks": 0,
+                "Clicks": 1,
                 "Impressions": 3,
                 "AvgImpressionPosition": 4.5,
             }
@@ -282,6 +329,7 @@ class BingWebmasterOutputTests(unittest.TestCase):
 
         report = output.getvalue()
         self.assertIn("aggregate: 4 impressions, 1 click\n", report)
+        self.assertIn("visible queries: 3 impressions (75.0% of aggregate), 1 click", report)
         self.assertIn("visible query lag: 1 day behind aggregate", report)
         self.assertNotIn("1 clicks", report)
         self.assertNotIn("1 days", report)
