@@ -66,6 +66,18 @@ def parse(path):
 
 
 class ContentStrategyTests(unittest.TestCase):
+    def test_homepage_has_impact_site_verification(self):
+        homepage = parse(PUBLIC / "index.html")
+        verification = [
+            item.get("value")
+            for item in homepage.metas
+            if item.get("name") == "impact-site-verification"
+        ]
+        self.assertEqual(
+            verification,
+            ["3022d885-4cf5-43f0-9d07-9fdfb75b69dd"],
+        )
+
     def test_better_coffee_hub_has_search_and_share_metadata(self):
         self.assertTrue(HUB_FILE.exists())
         page = parse(HUB_FILE)
