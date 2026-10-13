@@ -25,6 +25,7 @@ class PageParser(HTMLParser):
         self.metas = []
         self.links = []
         self.anchors = []
+        self.anchor_attributes = []
         self.jsonld = []
         self.in_jsonld = False
 
@@ -41,6 +42,7 @@ class PageParser(HTMLParser):
             self.links.append(attributes)
         elif tag == "a" and attributes.get("href"):
             self.anchors.append(attributes["href"])
+            self.anchor_attributes.append(attributes)
         elif tag == "script" and attributes.get("type") == "application/ld+json":
             self.in_jsonld = True
             self.jsonld.append("")
@@ -76,10 +78,36 @@ class ContentStrategyTests(unittest.TestCase):
         self.assertIn(disclosure, html)
         self.assertLess(html.index(disclosure), html.index(COFFEE_BROS_AFFILIATE_URL))
         self.assertIn("We have not taste-tested these coffees", html)
-        self.assertGreaterEqual(html.count(COFFEE_BROS_AFFILIATE_URL), 3)
-        self.assertIn('rel="sponsored nofollow noopener"', html)
-        self.assertIn('data-analytics-event="affiliate_click"', html)
-        self.assertIn('data-affiliate-partner="coffee_bros"', html)
+        self.assertIn('class="dropcap">A&nbsp;useful ', html)
+        affiliate_links = [
+            attributes
+            for attributes in parse(COFFEE_BROS_FILE).anchor_attributes
+            if attributes.get("data-analytics-event") == "affiliate_click"
+        ]
+        self.assertEqual(len(affiliate_links), 6)
+        placements = set()
+        for attributes in affiliate_links:
+            with self.subTest(placement=attributes.get("data-affiliate-placement")):
+                self.assertEqual(attributes.get("href"), COFFEE_BROS_AFFILIATE_URL)
+                self.assertEqual(
+                    set((attributes.get("rel") or "").split()),
+                    {"sponsored", "nofollow", "noopener"},
+                )
+                self.assertEqual(attributes.get("data-affiliate-partner"), "coffee_bros")
+                placement = attributes.get("data-affiliate-placement")
+                self.assertTrue(placement)
+                self.assertNotIn(placement, placements)
+                placements.add(placement)
+
+        self.assertEqual(html.count("Browse Coffee Bros (affiliate link)"), 6)
+        for misleading_label in (
+            "Browse Coffee Bros samples",
+            "Browse Coffee Bros coffee",
+            "Browse Coffee Bros espresso coffee",
+            "Browse Coffee Bros decaf",
+            "Browse Coffee Bros single origins",
+        ):
+            self.assertNotIn(misleading_label, html)
 
         self.assertIn(COFFEE_BROS_PATH, parse(PUBLIC / "index.html").anchors)
         self.assertIn(COFFEE_BROS_PATH, parse(PUBLIC / "journal" / "index.html").anchors)

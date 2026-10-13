@@ -93,12 +93,35 @@ function loadLink(dataset) {
     affiliatePartner: 'coffee_bros',
     affiliatePlacement: 'coffee_samples',
   });
-  state.handler({ button: 0, metaKey: false, ctrlKey: false, shiftKey: false, altKey: false });
+  let prevented = false;
+  state.handler({
+    button: 0,
+    metaKey: false,
+    ctrlKey: false,
+    shiftKey: false,
+    altKey: false,
+    preventDefault() { prevented = true; },
+  });
+  assert.equal(prevented, true);
+  assert.equal(state.navigations.length, 0);
   assert.equal(state.calls[0][0], 'event');
   assert.equal(state.calls[0][1], 'affiliate_click');
   assert.equal(state.calls[0][2].affiliate_partner, 'coffee_bros');
   assert.equal(state.calls[0][2].affiliate_placement, 'coffee_samples');
-  assert.deepEqual(Object.keys(state.calls[0][2]).sort(), ['affiliate_partner', 'affiliate_placement']);
+  assert.equal(typeof state.calls[0][2].event_callback, 'function');
+  assert.equal(state.calls[0][2].transport_type, 'beacon');
+  assert.deepEqual(Object.keys(state.calls[0][2]).sort(), [
+    'affiliate_partner',
+    'affiliate_placement',
+    'event_callback',
+    'transport_type',
+  ]);
+  assert.equal(state.timers.length, 1);
+  assert.equal(state.timers[0].delay, 500);
+  state.calls[0][2].event_callback();
+  assert.deepEqual(state.navigations, ['https://mokhacaffe.com/feed.xml']);
+  state.timers[0].callback();
+  assert.equal(state.navigations.length, 1);
 }
 
 console.log('feed, chart, contact, and affiliate analytics behavior passed');
