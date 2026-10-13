@@ -87,4 +87,18 @@ function loadLink(dataset) {
   assert.deepEqual(Object.keys(state.calls[0][2]).sort(), ['contact_method', 'inquiry_type']);
 }
 
-console.log('feed, chart, and contact analytics behavior passed');
+{
+  const state = loadLink({
+    analyticsEvent: 'affiliate_click',
+    affiliatePartner: 'coffee_bros',
+    affiliatePlacement: 'coffee_samples',
+  });
+  state.handler({ button: 0, metaKey: false, ctrlKey: false, shiftKey: false, altKey: false });
+  assert.equal(state.calls[0][0], 'event');
+  assert.equal(state.calls[0][1], 'affiliate_click');
+  assert.equal(state.calls[0][2].affiliate_partner, 'coffee_bros');
+  assert.equal(state.calls[0][2].affiliate_placement, 'coffee_samples');
+  assert.deepEqual(Object.keys(state.calls[0][2]).sort(), ['affiliate_partner', 'affiliate_placement']);
+}
+
+console.log('feed, chart, contact, and affiliate analytics behavior passed');

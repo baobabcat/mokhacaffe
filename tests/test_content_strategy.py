@@ -9,6 +9,9 @@ ROOT = Path(__file__).parents[1]
 PUBLIC = ROOT / "public"
 HUB_PATH = "/better-coffee-at-home/"
 HUB_FILE = PUBLIC / "better-coffee-at-home" / "index.html"
+COFFEE_BROS_PATH = "/journal/coffee-bros-buying-guide/"
+COFFEE_BROS_FILE = PUBLIC / "journal" / "coffee-bros-buying-guide" / "index.html"
+COFFEE_BROS_AFFILIATE_URL = "https://coffeebros.sjv.io/dyAd5K"
 
 
 class PageParser(HTMLParser):
@@ -66,6 +69,26 @@ def parse(path):
 
 
 class ContentStrategyTests(unittest.TestCase):
+    def test_coffee_bros_guide_is_disclosed_connected_and_sponsored(self):
+        self.assertTrue(COFFEE_BROS_FILE.exists())
+        html = COFFEE_BROS_FILE.read_text()
+        disclosure = "Mokha Caffè may earn a commission"
+        self.assertIn(disclosure, html)
+        self.assertLess(html.index(disclosure), html.index(COFFEE_BROS_AFFILIATE_URL))
+        self.assertIn("We have not taste-tested these coffees", html)
+        self.assertGreaterEqual(html.count(COFFEE_BROS_AFFILIATE_URL), 3)
+        self.assertIn('rel="sponsored nofollow noopener"', html)
+        self.assertIn('data-analytics-event="affiliate_click"', html)
+        self.assertIn('data-affiliate-partner="coffee_bros"', html)
+
+        self.assertIn(COFFEE_BROS_PATH, parse(PUBLIC / "index.html").anchors)
+        self.assertIn(COFFEE_BROS_PATH, parse(PUBLIC / "journal" / "index.html").anchors)
+
+        sitemap = ET.parse(PUBLIC / "sitemap.xml")
+        namespace = {"s": "http://www.sitemaps.org/schemas/sitemap/0.9"}
+        urls = [node.text for node in sitemap.findall("s:url/s:loc", namespace)]
+        self.assertIn("https://mokhacaffe.com" + COFFEE_BROS_PATH, urls)
+
     def test_homepage_has_impact_site_verification(self):
         homepage = parse(PUBLIC / "index.html")
         verification = [
@@ -319,7 +342,7 @@ class ContentStrategyTests(unittest.TestCase):
         )
         self.assertEqual(
             feed.getroot().findtext("a:updated", namespaces=atom),
-            "2026-09-14T00:00:00Z",
+            "2026-10-13T00:00:00Z",
         )
 
         for mark in ("—", "–", "“", "”"):
@@ -376,7 +399,7 @@ class ContentStrategyTests(unittest.TestCase):
             for node in sitemap.findall("s:url", namespace)
         }
         self.assertEqual(lastmods["https://mokhacaffe.com/story/"], article_data["dateModified"])
-        self.assertEqual(lastmods["https://mokhacaffe.com/"], "2026-10-10")
+        self.assertEqual(lastmods["https://mokhacaffe.com/"], "2026-10-13")
 
         for path in PUBLIC.rglob("*.html"):
             with self.subTest(path=path.relative_to(PUBLIC)):

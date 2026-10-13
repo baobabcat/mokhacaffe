@@ -41,7 +41,7 @@ class ScriptParser(HTMLParser):
 class GoogleAnalyticsTests(unittest.TestCase):
     def test_google_tag_is_on_every_html_page_and_allowed_by_csp(self):
         html_files = sorted(PUBLIC.rglob("*.html"))
-        self.assertEqual(14, len(html_files))
+        self.assertEqual(15, len(html_files))
 
         hashes = set()
         expected_src = (
@@ -98,7 +98,7 @@ class GoogleAnalyticsTests(unittest.TestCase):
             for path in sorted(PUBLIC.rglob("index.html"))
             if path != PUBLIC / "404.html"
         ]
-        self.assertEqual(13, len(indexable_pages))
+        self.assertEqual(14, len(indexable_pages))
 
         expected_link = (
             '<a href="/feed.xml" type="application/atom+xml" '

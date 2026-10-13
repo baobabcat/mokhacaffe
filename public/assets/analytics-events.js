@@ -31,6 +31,14 @@ document.querySelectorAll('[data-analytics-event]').forEach((link) => {
       return;
     }
 
+    if (eventName === 'affiliate_click') {
+      window.gtag('event', eventName, {
+        affiliate_partner: link.dataset.affiliatePartner,
+        affiliate_placement: link.dataset.affiliatePlacement,
+      });
+      return;
+    }
+
     window.gtag('event', eventName, {
       contact_method: 'email',
       inquiry_type: link.dataset.inquiryType || 'general',
