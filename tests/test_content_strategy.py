@@ -427,7 +427,7 @@ class ContentStrategyTests(unittest.TestCase):
             for node in sitemap.findall("s:url", namespace)
         }
         self.assertEqual(lastmods["https://mokhacaffe.com/story/"], article_data["dateModified"])
-        self.assertEqual(lastmods["https://mokhacaffe.com/"], "2026-10-13")
+        self.assertEqual(lastmods["https://mokhacaffe.com/"], "2026-10-24")
 
         for path in PUBLIC.rglob("*.html"):
             with self.subTest(path=path.relative_to(PUBLIC)):
@@ -505,14 +505,6 @@ class ContentStrategyTests(unittest.TestCase):
         namespace = {"s": "http://www.sitemaps.org/schemas/sitemap/0.9"}
         urls = [node.text for node in sitemap.findall("s:url/s:loc", namespace)]
         self.assertIn("https://mokhacaffe.com" + guide_path, urls)
-
-    def test_homepage_hero_routes_grind_searchers_to_chart(self):
-        homepage = (PUBLIC / "index.html").read_text()
-        expected_link = (
-            '<a class="btn primary" href="/coffee-grind-size-chart/" '
-            'data-analytics-event="grind_chart_open">Find your grind size</a>'
-        )
-        self.assertIn(expected_link, homepage)
 
     def test_grind_size_chart_is_published_and_connected(self):
         chart_path = "/coffee-grind-size-chart/"

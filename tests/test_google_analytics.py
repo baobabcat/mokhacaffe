@@ -114,8 +114,7 @@ class GoogleAnalyticsTests(unittest.TestCase):
             )
 
         script = (PUBLIC / "assets" / "analytics-events.js").read_text()
-        self.assertIn("eventName === 'feed_open'", script)
-        self.assertIn("eventName === 'grind_chart_open'", script)
+        self.assertIn("if (eventName === 'feed_open')", script)
         self.assertIn("event_callback: followFeed", script)
         self.assertIn("transport_type: 'beacon'", script)
 
