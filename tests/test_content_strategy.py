@@ -599,6 +599,11 @@ class ContentStrategyTests(unittest.TestCase):
             with self.subTest(path=path.relative_to(PUBLIC)):
                 self.assertLessEqual(len(parse(path).title.strip()), 60)
 
+    def test_display_fonts_do_not_swap_after_first_paint(self):
+        styles = (PUBLIC / "assets" / "styles.css").read_text()
+        self.assertEqual(styles.count("font-display: optional;"), 2)
+        self.assertNotIn("font-display: swap;", styles)
+
     def test_public_email_addresses_use_the_official_domain(self):
         official_email = "hello@mokhacaffe.com"
         contact_html = (PUBLIC / "contact" / "index.html").read_text()
