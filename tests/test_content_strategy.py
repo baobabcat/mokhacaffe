@@ -427,7 +427,7 @@ class ContentStrategyTests(unittest.TestCase):
             for node in sitemap.findall("s:url", namespace)
         }
         self.assertEqual(lastmods["https://mokhacaffe.com/story/"], article_data["dateModified"])
-        self.assertEqual(lastmods["https://mokhacaffe.com/"], "2026-10-24")
+        self.assertEqual(lastmods["https://mokhacaffe.com/"], "2026-10-26")
 
         for path in PUBLIC.rglob("*.html"):
             with self.subTest(path=path.relative_to(PUBLIC)):
@@ -445,6 +445,12 @@ class ContentStrategyTests(unittest.TestCase):
         self.assertIn("al-mokha", headline)
         self.assertIn("port", headline)
         self.assertIn("coffee", headline)
+
+    def test_homepage_routes_port_history_queries_to_story_with_descriptive_anchors(self):
+        homepage = (PUBLIC / "index.html").read_text()
+        self.assertIn('href="/story/">Read Al-Mokha\'s story</a>', homepage)
+        self.assertIn('href="/story/">Read Al-Mokha\'s coffee history →</a>', homepage)
+        self.assertIn('href="/story/">The full Al-Mokha story</a>', homepage)
 
     def test_story_has_article_structured_data(self):
         story = parse(PUBLIC / "story" / "index.html")
