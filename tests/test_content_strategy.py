@@ -71,6 +71,11 @@ def parse(path):
 
 
 class ContentStrategyTests(unittest.TestCase):
+    def test_html_avoids_inline_styles_blocked_by_csp(self):
+        for path in PUBLIC.rglob("*.html"):
+            with self.subTest(path=path.relative_to(PUBLIC)):
+                self.assertNotIn(' style="', path.read_text())
+
     def test_coffee_bros_guide_is_disclosed_connected_and_sponsored(self):
         self.assertTrue(COFFEE_BROS_FILE.exists())
         html = COFFEE_BROS_FILE.read_text()

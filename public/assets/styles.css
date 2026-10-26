@@ -376,6 +376,12 @@ hr.rule { border: none; border-top: 1px solid var(--line); margin: 2.6rem 0; }
 .legal { margin-top: 2rem; padding-top: 1.4rem; border-top: 1px solid var(--line); color: var(--faint); font-size: 0.82rem; display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
 
 /* ---------- misc ---------- */
+.error-page .display,
+.error-page .lede {
+  margin-left: auto;
+  margin-right: auto;
+}
+.error-page .btn-row { justify-content: center; }
 .skip {
   position: absolute; left: -999px; top: 0;
   background: var(--accent); color: #1b1109;
