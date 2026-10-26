@@ -122,6 +122,30 @@ class ContentStrategyTests(unittest.TestCase):
         urls = [node.text for node in sitemap.findall("s:url/s:loc", namespace)]
         self.assertIn("https://mokhacaffe.com" + COFFEE_BROS_PATH, urls)
 
+    def test_coffee_bros_guide_records_latest_source_review(self):
+        html = COFFEE_BROS_FILE.read_text()
+        article = json.loads(parse(COFFEE_BROS_FILE).jsonld[0])
+
+        self.assertEqual(article["datePublished"], "2026-10-13")
+        self.assertEqual(article["dateModified"], "2026-10-26")
+        self.assertEqual(html.count("checked on 2026-10-26"), 1)
+        self.assertEqual(html.count("checked 2026-10-26"), 1)
+
+        sitemap = ET.parse(PUBLIC / "sitemap.xml")
+        namespace = {"s": "http://www.sitemaps.org/schemas/sitemap/0.9"}
+        entries = {}
+        for node in sitemap.findall("s:url", namespace):
+            loc = node.find("s:loc", namespace)
+            lastmod = node.find("s:lastmod", namespace)
+            self.assertIsNotNone(loc)
+            self.assertIsNotNone(lastmod)
+            if loc is not None and lastmod is not None:
+                entries[loc.text] = lastmod.text
+        self.assertEqual(
+            entries["https://mokhacaffe.com" + COFFEE_BROS_PATH],
+            article["dateModified"],
+        )
+
     def test_homepage_has_impact_site_verification(self):
         homepage = parse(PUBLIC / "index.html")
         verification = [
@@ -373,10 +397,12 @@ class ContentStrategyTests(unittest.TestCase):
             entry.findtext("a:updated", namespaces=atom),
             "2026-09-13T00:00:00Z",
         )
-        self.assertEqual(
-            feed.getroot().findtext("a:updated", namespaces=atom),
-            "2026-10-13T00:00:00Z",
-        )
+        feed_updated = feed.getroot().findtext("a:updated", namespaces=atom)
+        entry_updates = [
+            entry.findtext("a:updated", namespaces=atom)
+            for entry in feed.findall("a:entry", atom)
+        ]
+        self.assertEqual(feed_updated, max(update for update in entry_updates if update))
 
         for mark in ("—", "–", "“", "”"):
             with self.subTest(mark=mark):
