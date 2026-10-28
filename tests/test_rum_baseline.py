@@ -160,6 +160,47 @@ class RumReferralTests(unittest.TestCase):
             stdout.getvalue(),
         )
 
+    def test_main_rejects_a_nonincreasing_fixed_window_before_requesting(self):
+        stderr = io.StringIO()
+        with (
+            mock.patch.dict(os.environ, {"CLOUDFLARE_API_TOKEN": "test-token"}),
+            mock.patch.object(
+                sys,
+                "argv",
+                [
+                    "rum_baseline.py",
+                    "--since",
+                    "2026-10-02T06:00:00Z",
+                    "--until",
+                    "2026-10-02T04:00:00Z",
+                ],
+            ),
+            mock.patch.object(
+                rum_baseline.urllib.request,
+                "urlopen",
+                return_value=io.BytesIO(
+                    json.dumps(
+                        {
+                            "data": {
+                                "viewer": {
+                                    "accounts": [
+                                        {"pathGroups": [], "referrerGroups": []}
+                                    ]
+                                }
+                            }
+                        }
+                    ).encode()
+                ),
+            ) as urlopen,
+            self.assertRaises(SystemExit) as exit_error,
+            contextlib.redirect_stderr(stderr),
+        ):
+            rum_baseline.main()
+
+        self.assertEqual(exit_error.exception.code, 2)
+        self.assertIn("fixed window start must be before end", stderr.getvalue())
+        urlopen.assert_not_called()
+
     def test_main_uses_path_groups_without_referrer_fragmentation(self):
         response = {
             "data": {

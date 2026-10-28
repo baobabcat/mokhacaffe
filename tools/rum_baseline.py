@@ -152,6 +152,10 @@ def main():
     if bool(args.since) != bool(args.until):
         ap.error("--since and --until must be used together")
     if args.since:
+        start = datetime.fromisoformat(args.since.replace("Z", "+00:00"))
+        end = datetime.fromisoformat(args.until.replace("Z", "+00:00"))
+        if start >= end:
+            ap.error("fixed window start must be before end")
         since = args.since
         until = args.until
     else:
