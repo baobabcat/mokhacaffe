@@ -81,9 +81,12 @@ class GoogleAnalyticsTests(unittest.TestCase):
 
     def test_official_email_click_records_contact_intent(self):
         contact = (PUBLIC / "contact" / "index.html").read_text()
-        self.assertEqual(3, contact.count('data-analytics-event="contact_intent"'))
-        for inquiry_type in ("first_roast", "wholesale", "press"):
+        self.assertEqual(4, contact.count('data-analytics-event="contact_intent"'))
+        for inquiry_type in ("brewing_question", "first_roast", "wholesale", "press"):
             self.assertIn(f'data-inquiry-type="{inquiry_type}"', contact)
+        self.assertIn("Brewer%20or%20method%3A", contact)
+        self.assertIn("What%20the%20cup%20tastes%20like%3A", contact)
+        self.assertIn("One%20change%20already%20tried%3A", contact)
         self.assertIn('<script defer src="/assets/analytics-events.js"></script>', contact)
 
         script = (PUBLIC / "assets" / "analytics-events.js").read_text()
