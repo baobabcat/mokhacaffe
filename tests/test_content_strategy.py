@@ -220,6 +220,24 @@ class ContentStrategyTests(unittest.TestCase):
             with self.subTest(source=source):
                 self.assertIn(source, article.anchors)
 
+    def test_qishr_search_snippet_covers_observed_gishr_and_recipe_intent(self):
+        article = parse(
+            PUBLIC / "journal" / "qishr-yemeni-ginger-coffee" / "index.html"
+        )
+        description = next(
+            (item.get("content", "") for item in article.metas if item.get("name") == "description"),
+            "",
+        )
+
+        self.assertEqual(
+            article.title.strip(),
+            "Qishr (Gishr): Yemeni Ginger Coffee Recipe | Mokha Caffè",
+        )
+        self.assertIn("also spelled gishr or kishr", description.lower())
+        self.assertIn("recipe", description.lower())
+        self.assertLessEqual(len(article.title.strip()), 60)
+        self.assertLessEqual(len(description), 170)
+
     def test_mocha_meanings_article_uses_pinned_sources_and_current_metadata(self):
         article_path = PUBLIC / "journal" / "what-mocha-really-means" / "index.html"
         article = parse(article_path)
